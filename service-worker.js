@@ -1,11 +1,11 @@
 const CACHE_NAME = 'tron-productivity-v1';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/signin.html',
-  '/styles.css',
-  '/script.js',
-  '/manifest.json',
+  '/Productive-Mind/',
+  '/Productive-Mind//index.html',
+  '/Productive-Mind//signin.html',
+  '/Productive-Mind//styles.css',
+  '/Productive-Mind//script.js',
+  '/Productive-Mind//manifest.json',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js',
   'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap'
