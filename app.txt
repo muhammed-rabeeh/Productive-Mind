@@ -1,0 +1,12 @@
+create a fully responsive productivity app with html,css,js and bootstrap following features,
+
+1)
+@Web @https://getfuturistic.wordpress.com/wp-content/uploads/2010/09/tron_legacyy.jpg ui will be like this legacy design with white glow instead of blue
+
+2) On the top there will be an option to set target, where user can set target time to be productive and after user set target time, there will be a clock timer animation running from set target time to zero,
+3) below that there will be a section to create tasks, where user can create tasks they want to complete and inside each task there will be step button to add steps to complete the task with step timer with start and stop button and a button to remove steps created and a button to remove main task created, when user start step timer it the state of timer will be saved to local storage even when user reload site can access it and continue timer.
+4) below that there will be a daily routine section where user can create daily routines, there will be a list of days where user can select day name and add routine task for the day to complete, each routine task have a check box to mark routine complete or not.
+After each routine for the day is complete there will be a "Done" button to mark the day as complete,
+below that there is a routine tracker calender where each day number (date) in a sqaure box where it will update mark with a tick "/" after user complete the routine task for the day and click done button for the day.
+all the tasks and daily routine created will be saved to local storage even when user reload site user can get the data.
+5) At the bottom there will be a Day summary section where user can see their total time utilized in a day after 11:00 PM.
