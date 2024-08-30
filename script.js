@@ -247,10 +247,13 @@ function renderRoutines(day) {
     if (routines[day]) {
         routines[day].forEach((routine, index) => {
             const li = document.createElement('li');
-            li.className = 'list-group-item';
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
             li.innerHTML = `
-                <input type="checkbox" class="form-check-input me-2 routine-checkbox" data-day="${day}" data-index="${index}" ${routine.completed ? 'checked' : ''}>
-                <span>${routine.text}</span>
+                <div>
+                    <input type="checkbox" class="form-check-input me-2 routine-checkbox" data-day="${day}" data-index="${index}" ${routine.completed ? 'checked' : ''}>
+                    <span>${routine.text}</span>
+                </div>
+                <button class="btn btn-sm btn-outline-danger remove-routine" data-day="${day}" data-index="${index}">Remove</button>
             `;
             routineList.appendChild(li);
         });
@@ -288,6 +291,17 @@ function renderRoutines(day) {
             const day = e.target.dataset.day;
             const index = parseInt(e.target.dataset.index);
             routines[day][index].completed = e.target.checked;
+            saveRoutines();
+        }
+    });
+
+    // Add event listener for remove routine buttons
+    routineList.addEventListener('click', (e) => {
+        if (e.target.classList.contains('remove-routine')) {
+            const day = e.target.dataset.day;
+            const index = parseInt(e.target.dataset.index);
+            routines[day].splice(index, 1);
+            renderRoutines(day);
             saveRoutines();
         }
     });
