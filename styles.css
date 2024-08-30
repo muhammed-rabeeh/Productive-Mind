@@ -323,14 +323,17 @@ h1, h2 {
     transition: all 0.3s ease;
 }
 
-.calendar-day.completed {
-    background-color: #4CAF50;
+.calendar-day.current-day {
     box-shadow: 0 0 10px rgba(76, 175, 80, 0.7);
+    border-color: #00ff00;
 }
 
-.calendar-day.current-day {
-    box-shadow: 0 0 10px rgba(0, 255, 0, 0.7);
-    border-color: #00ff00;
+.calendar-day.current-day.completed {
+    background-color: #4CAF50;
+}
+
+.calendar-day.past-completed {
+    background-color: rgba(76, 175, 80, 0.3);
 }
 
 .tick {

@@ -16,12 +16,12 @@ function getUserKey(key) {
     return `${currentUser}_${key}`;
 }
 
-let timerState = JSON.parse(localStorage.getItem(getUserKey('timerState'))) || { running: false, totalSeconds: 0, initialSeconds: 0 };
+let timerState = JSON.parse(localStorage.getItem(getUserKey('timerState'))) || { running: false, endTime: 0, initialSeconds: 0 };
 
-function updateTimerDisplay(totalSeconds) {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
+function updateTimerDisplay(remainingSeconds) {
+    const hours = Math.floor(remainingSeconds / 3600);
+    const minutes = Math.floor((remainingSeconds % 3600) / 60);
+    const seconds = remainingSeconds % 60;
     targetTimerDisplay.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
@@ -33,11 +33,12 @@ function updateCircle(remainingSeconds, totalSeconds) {
 function startTimer() {
     clearInterval(targetTimer);
     targetTimer = setInterval(() => {
-        timerState.totalSeconds--;
-        updateTimerDisplay(timerState.totalSeconds);
-        updateCircle(timerState.totalSeconds, timerState.initialSeconds);
+        const now = new Date().getTime();
+        const remainingSeconds = Math.max(0, Math.floor((timerState.endTime - now) / 1000));
+        updateTimerDisplay(remainingSeconds);
+        updateCircle(remainingSeconds, timerState.initialSeconds);
         
-        if (timerState.totalSeconds <= 0) {
+        if (remainingSeconds <= 0) {
             clearInterval(targetTimer);
             timerState.running = false;
             alert('Target time reached!');
@@ -53,26 +54,26 @@ startTargetTimer.addEventListener('click', () => {
         return;
     }
     
-    timerState.totalSeconds = Math.floor(hours * 3600);
-    timerState.initialSeconds = timerState.totalSeconds;
+    const now = new Date().getTime();
+    timerState.endTime = now + hours * 3600 * 1000;
+    timerState.initialSeconds = Math.floor(hours * 3600);
     timerState.running = true;
     
-    updateTimerDisplay(timerState.totalSeconds);
-    updateCircle(timerState.totalSeconds, timerState.initialSeconds);
+    updateTimerDisplay(timerState.initialSeconds);
+    updateCircle(timerState.initialSeconds, timerState.initialSeconds);
     startTimer();
 });
 
 // Check if timer was running and resume if necessary
-if (timerState.running) {
-    updateTimerDisplay(timerState.totalSeconds);
-    updateCircle(timerState.totalSeconds, timerState.initialSeconds);
+if (timerState.running && timerState.endTime > new Date().getTime()) {
+    const remainingSeconds = Math.floor((timerState.endTime - new Date().getTime()) / 1000);
+    updateTimerDisplay(remainingSeconds);
+    updateCircle(remainingSeconds, timerState.initialSeconds);
     startTimer();
-}
-
-// Add an event listener to save timer state when the page is about to unload
-window.addEventListener('beforeunload', () => {
+} else {
+    timerState.running = false;
     localStorage.setItem(getUserKey('timerState'), JSON.stringify(timerState));
-});
+}
 
 // Task Creation
 const addTaskBtn = document.getElementById('add-task');
@@ -85,7 +86,7 @@ addTaskBtn.addEventListener('click', addTask);
 function addTask() {
     const taskText = taskInput.value.trim();
     if (taskText) {
-        const newTask = { text: taskText, steps: [] };
+        const newTask = { text: taskText, steps: [], completed: false };
         tasks.push(newTask);
         renderTasks();
         saveTasks();
@@ -100,7 +101,10 @@ function renderTasks() {
         li.className = 'list-group-item task-item';
         li.innerHTML = `
             <div class="d-flex justify-content-between align-items-center">
-                <span class="task-text">${task.text}</span>
+                <div>
+                    <input type="checkbox" class="form-check-input me-2 task-checkbox" ${task.completed ? 'checked' : ''}>
+                    <span class="task-text">${task.text}</span>
+                </div>
                 <div>
                     <button class="btn btn-sm btn-outline-primary add-step" data-task-index="${taskIndex}">Add Step</button>
                     <button class="btn btn-sm btn-outline-danger remove-task" data-task-index="${taskIndex}">Remove</button>
@@ -122,7 +126,10 @@ function createStepItem(step, taskIndex, stepIndex) {
     stepItem.className = 'list-group-item step-item';
     stepItem.innerHTML = `
         <div class="d-flex justify-content-between align-items-center">
-            <span>${step.text}</span>
+            <div>
+                <input type="checkbox" class="form-check-input me-2 step-checkbox" ${step.completed ? 'checked' : ''}>
+                <span>${step.text}</span>
+            </div>
             <div>
                 <button class="btn btn-sm btn-outline-primary toggle-step-timer" data-task-index="${taskIndex}" data-step-index="${stepIndex}">${step.timerRunning ? 'Stop' : 'Start'}</button>
                 <button class="btn btn-sm btn-outline-danger remove-step" data-task-index="${taskIndex}" data-step-index="${stepIndex}">Remove</button>
@@ -164,13 +171,22 @@ taskList.addEventListener('click', (e) => {
         const taskIndex = e.target.dataset.taskIndex;
         const stepIndex = e.target.dataset.stepIndex;
         toggleStepTimer(taskIndex, stepIndex);
+    } else if (e.target.classList.contains('task-checkbox')) {
+        const taskIndex = e.target.closest('.task-item').querySelector('.add-step').dataset.taskIndex;
+        tasks[taskIndex].completed = e.target.checked;
+        saveTasks();
+    } else if (e.target.classList.contains('step-checkbox')) {
+        const taskIndex = e.target.closest('.task-item').querySelector('.add-step').dataset.taskIndex;
+        const stepIndex = e.target.closest('.step-item').querySelector('.toggle-step-timer').dataset.stepIndex;
+        tasks[taskIndex].steps[stepIndex].completed = e.target.checked;
+        saveTasks();
     }
 });
 
 function addStep(taskIndex) {
     const stepText = prompt('Enter step description:');
     if (stepText) {
-        tasks[taskIndex].steps.push({ text: stepText, elapsedTime: 0, timerRunning: false });
+        tasks[taskIndex].steps.push({ text: stepText, elapsedTime: 0, timerRunning: false, completed: false });
         renderTasks();
         saveTasks();
     }
@@ -233,7 +249,7 @@ function renderRoutines(day) {
             const li = document.createElement('li');
             li.className = 'list-group-item';
             li.innerHTML = `
-                <input type="checkbox" class="form-check-input me-2" ${routine.completed ? 'checked' : ''}>
+                <input type="checkbox" class="form-check-input me-2 routine-checkbox" data-day="${day}" data-index="${index}" ${routine.completed ? 'checked' : ''}>
                 <span>${routine.text}</span>
             `;
             routineList.appendChild(li);
@@ -256,13 +272,23 @@ function renderRoutines(day) {
     markDayCompleteBtn.addEventListener('click', () => {
         const completedRoutines = routineList.querySelectorAll('input[type="checkbox"]:checked');
         if (completedRoutines.length === routineList.children.length && routineList.children.length > 0) {
-            alert(`Great job! You've completed all routines for ${day}.`);
-            updateTrackerCalendar(day);
+            alert(`Great job! You've completed all routines for today.`);
+            updateTrackerCalendar();
             routines[day].forEach(routine => routine.completed = true);
             saveRoutines();
-            createCalendar(currentYear, currentMonth); // Add this line to update the calendar immediately
+            createCalendar(currentYear, currentMonth);
         } else {
             alert('Please complete all routines before marking the day as complete.');
+        }
+    });
+
+    // Add event listener for checkbox changes
+    routineList.addEventListener('change', (e) => {
+        if (e.target.classList.contains('routine-checkbox')) {
+            const day = e.target.dataset.day;
+            const index = parseInt(e.target.dataset.index);
+            routines[day][index].completed = e.target.checked;
+            saveRoutines();
         }
     });
 }
@@ -300,37 +326,59 @@ function createCalendar(year, month) {
         trackerCalendar.appendChild(emptyDay);
     }
 
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0];
+
     for (let day = 1; day <= daysInMonth; day++) {
         const calendarDay = document.createElement('div');
         calendarDay.className = 'calendar-day';
-        if (day === currentDate.getDate() && month === currentDate.getMonth() && year === currentDate.getFullYear()) {
-            calendarDay.classList.add('current-day');
-        }
         const dateString = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-        if (completedDays[dateString]) {
-            calendarDay.classList.add('completed');
-            const tick = document.createElement('div');
-            tick.className = 'tick';
-            calendarDay.appendChild(tick);
+        
+        if (dateString === todayString) {
+            calendarDay.classList.add('current-day');
+            if (completedDays[dateString]) {
+                calendarDay.classList.add('completed');
+                const tick = document.createElement('div');
+                tick.className = 'tick';
+                calendarDay.appendChild(tick);
+            }
+        } else if (completedDays[dateString]) {
+            calendarDay.classList.add('past-completed');
         }
+        
         calendarDay.textContent = day;
         trackerCalendar.appendChild(calendarDay);
     }
 }
 
-function updateTrackerCalendar(completedDay) {
+function updateTrackerCalendar() {
     const today = new Date();
     const dateString = today.toISOString().split('T')[0];
     completedDays[dateString] = true;
     localStorage.setItem(getUserKey('completedDays'), JSON.stringify(completedDays));
+    
+    // Recreate the calendar to reflect the changes
     createCalendar(today.getFullYear(), today.getMonth());
 }
 
 // Day Summary
+const summaryDisplay = document.getElementById('summary-display');
+
 function updateDaySummary() {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
-    const summaryDisplay = document.getElementById('summary-display');
+    
+    // Reset tasks and productive time at midnight
+    if (now.getHours() === 0 && now.getMinutes() === 0) {
+        tasks.forEach(task => {
+            task.completed = false;
+            task.steps.forEach(step => {
+                step.completed = false;
+                step.elapsedTime = 0;
+            });
+        });
+        saveTasks();
+    }
     
     let totalTime = 0;
     const completedTasksList = tasks.map(task => {
@@ -343,7 +391,7 @@ function updateDaySummary() {
     const minutes = Math.floor((totalTime % 3600) / 60);
     
     const summary = `
-        <h3>Today's Summary (${today}):</h3>
+        <h3>Today's Summary (${now.toLocaleDateString()}):</h3>
         <p>Total Productive Time: ${hours} hours ${minutes} minutes</p>
         <h4>Completed Tasks:</h4>
         <ul>${completedTasksList}</ul>
@@ -357,6 +405,7 @@ function updateDaySummary() {
 }
 
 // Initial renders and setups
+loadRoutines();
 renderTasks();
 createCalendar(currentYear, currentMonth);
 updateDaySummary();
@@ -405,4 +454,20 @@ const signoutBtn = document.getElementById('signout-btn');
 signoutBtn.addEventListener('click', () => {
     localStorage.removeItem('currentUser');
     window.location.href = 'signin.html';
+});
+
+// Make sure to call this function when the page loads
+function loadRoutines() {
+    const savedRoutines = localStorage.getItem(getUserKey('routines'));
+    if (savedRoutines) {
+        routines = JSON.parse(savedRoutines);
+    }
+}
+
+// Call loadRoutines at the beginning of your script
+loadRoutines();
+
+// Add this at the end of your script
+window.addEventListener('beforeunload', () => {
+    localStorage.setItem(getUserKey('timerState'), JSON.stringify(timerState));
 });
