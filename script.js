@@ -134,6 +134,12 @@ function updateStepSegmentsOnly() {
     });
 }
 
+// Add this function to play the bell sound
+function playBellSound() {
+    const bellSound = document.getElementById('bell-sound');
+    bellSound.play();
+}
+
 // Modify the showStepTimerPopup function
 function showStepTimerPopup(taskIndex, stepIndex) {
     const step = tasks[taskIndex].steps[stepIndex];
@@ -153,14 +159,44 @@ function showStepTimerPopup(taskIndex, stepIndex) {
         toggleStepTimer(taskIndex, stepIndex);
     });
 
+    let lastBellTime = Math.floor(step.elapsedTime / 1800) * 1800; // Round down to the nearest 30 minutes
+
     step.timerInterval = setInterval(() => {
         const now = new Date().getTime();
         const totalElapsed = Math.floor((now - step.startTime) / 1000);
-        step.elapsedTime = totalElapsed; // Update elapsed time directly
+        step.elapsedTime = totalElapsed;
         popup.querySelector('.step-timer-display').textContent = formatTime(totalElapsed);
+
+        // Check if 30 minutes have passed since the last bell
+        if (totalElapsed - lastBellTime >= 1800) {
+            playBellSound();
+            lastBellTime = totalElapsed;
+        }
+
         saveTasks();
         updateStepSegmentsOnly();
     }, 1000);
+}
+
+// Modify the toggleStepTimer function to clear the interval when stopping
+function toggleStepTimer(taskIndex, stepIndex) {
+    const step = tasks[taskIndex].steps[stepIndex];
+    step.timerRunning = !step.timerRunning;
+    
+    if (step.timerRunning) {
+        step.startTime = new Date().getTime() - (step.elapsedTime * 1000);
+        showStepTimerPopup(taskIndex, stepIndex);
+    } else {
+        hideStepTimerPopup();
+        clearInterval(step.timerInterval);
+        const now = new Date().getTime();
+        const elapsedSinceStart = now - step.startTime;
+        step.elapsedTime = Math.floor(elapsedSinceStart / 1000);
+        updateTargetTimer(step.elapsedTime, step.text);
+    }
+    
+    renderTasks();
+    saveTasks();
 }
 
 // Modify the startTimer function
