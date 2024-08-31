@@ -382,16 +382,19 @@ function updateDaySummary() {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
     
-    // Reset tasks and productive time at midnight
-    if (now.getHours() === 0 && now.getMinutes() === 0) {
+    // Reset tasks and productive time at 11:59 PM
+    if (now.getHours() === 23 && now.getMinutes() === 59) {
         tasks.forEach(task => {
-            task.completed = false;
             task.steps.forEach(step => {
-                step.completed = false;
                 step.elapsedTime = 0;
+                step.timerRunning = false;
+                if (step.timerInterval) {
+                    clearInterval(step.timerInterval);
+                }
             });
         });
         saveTasks();
+        renderTasks();
     }
     
     let totalTime = 0;
@@ -424,8 +427,8 @@ renderTasks();
 createCalendar(currentYear, currentMonth);
 updateDaySummary();
 
-// Call updateDaySummary every minute
-setInterval(updateDaySummary, 60000);
+// Call updateDaySummary every second
+setInterval(updateDaySummary, 1000);
 
 // Set up initial routine display
 const currentDay = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][currentDate.getDay()];
