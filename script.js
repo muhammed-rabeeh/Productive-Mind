@@ -30,13 +30,96 @@ function updateCircle(remainingSeconds, totalSeconds) {
     timerCircle.style.strokeDashoffset = offset;
 }
 
+// Add this variable at the top of the file
+let stepTimers = [];
+
+// Modify the updateTargetTimer function
+function updateTargetTimer(elapsedTime, stepText) {
+    const totalSeconds = timerState.initialSeconds || 3600; // Default to 1 hour if not set
+    const remainingSeconds = Math.max(0, totalSeconds - elapsedTime);
+    timerState.endTime = new Date().getTime() + remainingSeconds * 1000;
+    updateTimerDisplay(remainingSeconds);
+    updateCircle(remainingSeconds, totalSeconds);
+    
+    // Add step info to the timer display as a colored segment
+    const stepPercentage = (elapsedTime / totalSeconds) * 100;
+    const stepColor = getRandomColor();
+    
+    stepTimers.push({ text: stepText, percentage: stepPercentage, color: stepColor });
+    
+    updateStepSegments();
+}
+
+// Add these new functions
+function updateStepSegments() {
+    const svg = document.querySelector('#timer-container svg');
+    const existingSegments = svg.querySelectorAll('.step-segment');
+    existingSegments.forEach(segment => segment.remove());
+
+    let cumulativePercentage = 0;
+    stepTimers.forEach((step, index) => {
+        const segment = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        segment.setAttribute('cx', '100');
+        segment.setAttribute('cy', '100');
+        segment.setAttribute('r', '90');
+        segment.setAttribute('fill', 'none');
+        segment.setAttribute('stroke', step.color);
+        segment.setAttribute('stroke-width', '10');
+        segment.setAttribute('class', 'step-segment');
+
+        const segmentLength = circleCirumference * (step.percentage / 100);
+        segment.setAttribute('stroke-dasharray', `${segmentLength} ${circleCirumference}`);
+        
+        const rotation = cumulativePercentage * 3.6 - 90; // 3.6 degrees per percentage point
+        segment.setAttribute('transform', `rotate(${rotation} 100 100)`);
+
+        svg.appendChild(segment);
+        cumulativePercentage += step.percentage;
+    });
+}
+
+function getRandomColor() {
+    const hue = Math.floor(Math.random() * 360);
+    return `hsl(${hue}, 70%, 50%)`;
+}
+
+// Modify the showStepTimerPopup function
+function showStepTimerPopup(taskIndex, stepIndex) {
+    const step = tasks[taskIndex].steps[stepIndex];
+    const popup = document.createElement('div');
+    popup.className = 'step-timer-popup';
+    popup.innerHTML = `
+        <div class="step-timer-content">
+            <h3>${step.text}</h3>
+            <div class="step-timer-display">${formatTime(step.elapsedTime)}</div>
+            <button class="btn btn-danger stop-step-timer">Stop Timer</button>
+        </div>
+    `;
+    document.body.appendChild(popup);
+
+    const stopBtn = popup.querySelector('.stop-step-timer');
+    stopBtn.addEventListener('click', () => {
+        toggleStepTimer(taskIndex, stepIndex);
+    });
+
+    step.timerInterval = setInterval(() => {
+        const now = new Date().getTime();
+        step.elapsedTime = Math.floor((now - step.startTime) / 1000);
+        popup.querySelector('.step-timer-display').textContent = formatTime(step.elapsedTime);
+        saveTasks();
+    }, 1000);
+}
+
+// Modify the startTimer function
 function startTimer() {
     clearInterval(targetTimer);
+    stepTimers = []; // Reset step timers
+    updateStepSegments(); // Clear step segments
     targetTimer = setInterval(() => {
         const now = new Date().getTime();
         const remainingSeconds = Math.max(0, Math.floor((timerState.endTime - now) / 1000));
         updateTimerDisplay(remainingSeconds);
-        updateCircle(remainingSeconds, timerState.initialSeconds);
+        updateCircle(remainingSeconds, timerState.initialSeconds || 3600);
         
         if (remainingSeconds <= 0) {
             clearInterval(targetTimer);
@@ -197,18 +280,23 @@ function toggleStepTimer(taskIndex, stepIndex) {
     step.timerRunning = !step.timerRunning;
     
     if (step.timerRunning) {
-        step.timerInterval = setInterval(() => {
-            step.elapsedTime++;
-            renderTasks();
-            saveTasks();
-            updateDaySummary();
-        }, 1000);
+        step.startTime = new Date().getTime() - (step.elapsedTime * 1000);
+        showStepTimerPopup(taskIndex, stepIndex);
     } else {
+        hideStepTimerPopup();
         clearInterval(step.timerInterval);
+        updateTargetTimer(step.elapsedTime, step.text);
     }
     
     renderTasks();
     saveTasks();
+}
+
+function hideStepTimerPopup() {
+    const popup = document.querySelector('.step-timer-popup');
+    if (popup) {
+        popup.remove();
+    }
 }
 
 // Daily Routine
@@ -488,3 +576,25 @@ loadRoutines();
 window.addEventListener('beforeunload', () => {
     localStorage.setItem(getUserKey('timerState'), JSON.stringify(timerState));
 });
+
+// Add this function to initialize step timers when loading tasks
+function initializeStepTimers() {
+    tasks.forEach((task, taskIndex) => {
+        task.steps.forEach((step, stepIndex) => {
+            if (step.timerRunning) {
+                step.startTime = new Date().getTime() - (step.elapsedTime * 1000);
+                showStepTimerPopup(taskIndex, stepIndex);
+            }
+        });
+    });
+}
+
+// Call this function after loading tasks
+function loadTasks() {
+    tasks = JSON.parse(localStorage.getItem(getUserKey('tasks'))) || [];
+    renderTasks();
+    initializeStepTimers();
+}
+
+// Replace the existing loadTasks call with this new function
+loadTasks();

@@ -85,114 +85,44 @@ h1, h2 {
     transform: translate(-50%, -50%);
     font-size: 2em;
     text-align: center;
+    z-index: 2;
 }
 
 #timer-circle {
     transition: stroke-dashoffset 1s linear;
 }
 
-.random-task-popup {
-    position: fixed;
+#pie-chart {
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 1;
+}
+
+#pie-chart-legend {
+    margin-top: 20px;
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
+}
+
+.legend-item {
+    display: flex;
     align-items: center;
-    z-index: 1000;
+    margin: 5px 10px;
 }
 
-.random-task-content {
-    background-color: #000;
-    border: 2px solid #fff;
-    border-radius: 10px;
-    padding: 20px;
-    text-align: center;
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.7);
-    max-width: 80%;
+.legend-color {
+    width: 20px;
+    height: 20px;
+    margin-right: 5px;
+    border-radius: 50%;
 }
 
-.random-task-content h3 {
-    margin-bottom: 15px;
-}
-
-.random-task-content p {
-    font-size: 1.2em;
-    margin-bottom: 20px;
-}
-
-.task-item {
-    margin-bottom: 20px;
-    padding: 10px;
-}
-
-.step-list {
-    margin-top: 10px;
-    padding-left: 0;
-}
-
-.step-item {
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    margin-bottom: 5px;
-    padding: 10px;
-}
-
-.step-timer {
+.legend-text {
     font-size: 0.9em;
-    color: #aaa;
-    margin-top: 5px;
-}
-
-.list-group-item {
-    background-color: rgba(0, 0, 0, 0.6);
-    border: 1px solid #fff;
-    color: #fff;
-    margin-bottom: 10px;
-}
-
-.list-group-item > div {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.list-group-item > div > div {
-    display: flex;
-    gap: 5px;
-}
-
-@media (max-width: 576px) {
-    .list-group-item > div {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .list-group-item > div > div {
-        margin-top: 10px;
-    }
-}
-
-#timer-container {
-    position: relative;
-    width: 200px;
-    height: 200px;
-    margin: 0 auto;
-}
-
-#target-timer-display {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 2em;
-    text-align: center;
-}
-
-#timer-circle {
-    transition: stroke-dashoffset 1s linear;
 }
 
 .random-task-popup {
@@ -356,4 +286,72 @@ h1, h2 {
 
 .day-container h3 {
     margin-bottom: 10px;
+}
+
+/* Add these styles to your existing CSS */
+
+.step-timer-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.step-timer-content {
+    background-color: #000;
+    border: 2px solid #fff;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.7);
+}
+
+.step-timer-display {
+    font-size: 2em;
+    margin: 20px 0;
+}
+
+.step-info {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.8em;
+    white-space: nowrap;
+}
+
+#timer-container {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    margin: 0 auto;
+}
+
+#target-timer-display {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2em;
+    text-align: center;
+}
+
+.step-info {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.8em;
+    white-space: nowrap;
+}
+
+/* Add this to your existing CSS */
+.step-segment {
+    transition: stroke-dashoffset 0.5s ease;
 }
