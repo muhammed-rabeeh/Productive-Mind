@@ -4,7 +4,7 @@ const startTargetTimer = document.getElementById('start-target-timer');
 const targetTimeInput = document.getElementById('target-time');
 const targetTimerDisplay = document.getElementById('target-timer-display');
 const timerCircle = document.getElementById('timer-circle');
-const circleCirumference = 2 * Math.PI * 90; // 2πr
+const circleCircumference = 2 * Math.PI * 90; // 2πr
 
 // Load timer state from local storage
 const currentUser = localStorage.getItem('currentUser');
@@ -16,9 +16,11 @@ function getUserKey(key) {
     return `${currentUser}_${key}`;
 }
 
-let timerState = JSON.parse(localStorage.getItem(getUserKey('timerState'))) || { 
-    running: false, 
-    endTime: 0, 
+speak("Hey, I'm Productive Mind. Let's get started!");
+
+let timerState = JSON.parse(localStorage.getItem(getUserKey('timerState'))) || {
+    running: false,
+    endTime: 0,
     initialSeconds: 0,
     stepTimers: [] // Add this to store step timer information
 };
@@ -31,7 +33,7 @@ function updateTimerDisplay(remainingSeconds) {
 }
 
 function updateCircle(remainingSeconds, totalSeconds) {
-    const offset = circleCirumference * (1 - remainingSeconds / totalSeconds);
+    const offset = circleCircumference * (1 - remainingSeconds / totalSeconds);
     timerCircle.style.strokeDashoffset = offset;
 }
 
@@ -42,13 +44,13 @@ function updateTargetTimer(elapsedTime, stepText) {
     const remainingSeconds = Math.max(0, Math.floor((timerState.endTime - now) / 1000));
     updateTimerDisplay(remainingSeconds);
     updateCircle(remainingSeconds, totalSeconds);
-    
+
     // Add step info to the timer display as a colored segment
     const stepPercentage = (elapsedTime / totalSeconds) * 100;
     const stepColor = getRandomColor();
-    
+
     timerState.stepTimers.push({ text: stepText, percentage: stepPercentage, color: stepColor });
-    
+
     updateStepSegments();
     saveTimerState();
 }
@@ -69,9 +71,9 @@ function updateStepSegments() {
         segment.setAttribute('stroke-width', '10');
         segment.setAttribute('class', 'step-segment');
 
-        const segmentLength = circleCirumference * (step.percentage / 100);
-        segment.setAttribute('stroke-dasharray', `${segmentLength} ${circleCirumference}`);
-        
+        const segmentLength = circleCircumference * (step.percentage / 100);
+        segment.setAttribute('stroke-dasharray', `${segmentLength} ${circleCircumference}`);
+
         const rotation = cumulativePercentage * 3.6 - 90; // 3.6 degrees per percentage point
         segment.setAttribute('transform', `rotate(${rotation} 100 100)`);
 
@@ -83,27 +85,6 @@ function updateStepSegments() {
 function getRandomColor() {
     const hue = Math.floor(Math.random() * 360);
     return `hsl(${hue}, 70%, 50%)`;
-}
-
-// Modify the toggleStepTimer function
-function toggleStepTimer(taskIndex, stepIndex) {
-    const step = tasks[taskIndex].steps[stepIndex];
-    step.timerRunning = !step.timerRunning;
-    
-    if (step.timerRunning) {
-        step.startTime = new Date().getTime() - (step.elapsedTime * 1000);
-        showStepTimerPopup(taskIndex, stepIndex);
-    } else {
-        hideStepTimerPopup();
-        clearInterval(step.timerInterval);
-        const now = new Date().getTime();
-        const elapsedSinceStart = now - step.startTime;
-        step.elapsedTime = Math.floor(elapsedSinceStart / 1000); // Update elapsed time directly
-        updateTargetTimer(step.elapsedTime, step.text);
-    }
-    
-    renderTasks();
-    saveTasks();
 }
 
 // Add a new function to update step segments without affecting the target timer
@@ -123,9 +104,9 @@ function updateStepSegmentsOnly() {
         segment.setAttribute('stroke-width', '10');
         segment.setAttribute('class', 'step-segment');
 
-        const segmentLength = circleCirumference * (step.percentage / 100);
-        segment.setAttribute('stroke-dasharray', `${segmentLength} ${circleCirumference}`);
-        
+        const segmentLength = circleCircumference * (step.percentage / 100);
+        segment.setAttribute('stroke-dasharray', `${segmentLength} ${circleCircumference}`);
+
         const rotation = cumulativePercentage * 3.6 - 90; // 3.6 degrees per percentage point
         segment.setAttribute('transform', `rotate(${rotation} 100 100)`);
 
@@ -140,6 +121,13 @@ function playBellSound() {
     bellSound.play();
 }
 
+// Function to speak text using Web Speech API
+function speak(text) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    speechSynthesis.speak(utterance);
+}
+
+
 // Modify the showStepTimerPopup function
 function showStepTimerPopup(taskIndex, stepIndex) {
     const step = tasks[taskIndex].steps[stepIndex];
@@ -148,55 +136,214 @@ function showStepTimerPopup(taskIndex, stepIndex) {
     popup.innerHTML = `
         <div class="step-timer-content">
             <h3>${step.text}</h3>
-            <div class="step-timer-display">${formatTime(step.elapsedTime)}</div>
-            <button class="btn btn-danger stop-step-timer">Stop Timer</button>
+            <div class="step-timer-display">${formatTime(step.remainingTime)}</div> 
+            <button class="btn btn-secondary pause-step-timer">Pause Timer</button>
         </div>
     `;
     document.body.appendChild(popup);
 
-    const stopBtn = popup.querySelector('.stop-step-timer');
-    stopBtn.addEventListener('click', () => {
-        toggleStepTimer(taskIndex, stepIndex);
+    const pauseBtn = popup.querySelector('.pause-step-timer');
+    let prod=true;
+
+    // Pause Restart Timer
+    let pauseRestartTimer;
+    let timeLost = 0;
+    let pauseTime = 0;
+
+    // Modify the Pause Button Functionality
+    pauseBtn.addEventListener('click', () => {
+        if (step.timerRunning) {
+            clearInterval(step.timerInterval);
+            pauseTime = new Date().getTime(); // Store pause time
+            speak('Why are you stopping your productive task?');
+            prompt('Why are you stopping your productive task?');
+            pauseRestartTimer = setInterval(() => {
+                timeLost = Math.floor((new Date().getTime() - pauseTime) / 1000);
+                pauseBtn.textContent = `Restart Timer`;
+            }, 1000);
+            step.timerRunning = false;
+        } else {
+            // Restart from pause
+            clearInterval(pauseRestartTimer);
+            speak(`You have lost ${formatTime(timeLost)} of your productive time, What did you do during that time?`);
+            const reason = prompt(`You have lost ${formatTime(timeLost)} of your productive time, What did you do during that time?`);
+
+            if (reason === "productive") {
+                speak("You have done a productive task, so you can restart the timer.");
+                prod=true;
+                // Restart from the paused time
+                step.startTime = new Date().getTime() - (step.elapsedTime * 1000);
+            } else if (reason === "not productive") {
+                speak("You have not done any productive task, so your productive time is lost.");
+                prod=false;
+                // Restart after subtracting time lost from the paused time
+                step.elapsedTime += timeLost;
+                step.startTime = new Date().getTime() - (step.elapsedTime * 1000);
+            } else {
+                // Handle invalid input (user did not enter productive or not productive)
+                speak("Please enter 'productive' or 'not productive'.");
+                alert("Please enter 'productive' or 'not productive'.");
+                return; // Don't restart the timer
+            }
+            step.timerRunning = true; // Restart the timer
+            startStepTimer(taskIndex, stepIndex);
+            pauseBtn.textContent = 'Pause Timer';
+        }
     });
+
 
     let lastBellTime = Math.floor(step.elapsedTime / 1800) * 1800; // Round down to the nearest 30 minutes
 
-    step.timerInterval = setInterval(() => {
-        const now = new Date().getTime();
-        const totalElapsed = Math.floor((now - step.startTime) / 1000);
-        step.elapsedTime = totalElapsed;
-        popup.querySelector('.step-timer-display').textContent = formatTime(totalElapsed);
+    function startStepTimer(taskIndex, stepIndex) {
+        step.timerInterval = setInterval(() => {
+            const now = new Date().getTime();
+            const totalElapsed = Math.floor((now - step.startTime) / 1000);
+            step.elapsedTime = totalElapsed; // Keep track of actual elapsed time
+            step.remainingTime = step.initialTime - totalElapsed; // Calculate remaining time
+            popup.querySelector('.step-timer-display').textContent = formatTime(step.remainingTime); // Display remaining time
 
-        // Check if 30 minutes have passed since the last bell
-        if (totalElapsed - lastBellTime >= 1800) {
-            playBellSound();
-            lastBellTime = totalElapsed;
-        }
+            // Check if 30 minutes have passed since the last bell
+            if (totalElapsed - lastBellTime >= 1800) {
+                playBellSound();
+                lastBellTime = totalElapsed;
+            }
 
-        saveTasks();
-        updateStepSegmentsOnly();
-    }, 1000);
+            saveTasks();
+            updateStepSegmentsOnly();
+
+            if (step.remainingTime <= 1) {
+                playBellSound();
+            }
+
+            // Check if time is up
+            if (step.remainingTime <= 0) {
+                clearInterval(step.timerInterval);
+                step.timerRunning = false;
+                if (prod === false) {
+                    alert("You have wasted time and not completed the task");
+                    step.completed = false;
+                } else {
+                    step.completed = true;
+                }
+                
+                // Prompt for additional time
+                speak("Time's up! Do you need more time (in hours or minutes)?");
+                const additionalTime = prompt("Time's up! Do you need more time (in hours [H] or minutes [M])?");
+                if (additionalTime !== null && additionalTime !== "no") {
+                    const timeValue = parseFloat(additionalTime.slice(0, -1)); // Extract the number
+                    const unit = additionalTime.slice(-1).toUpperCase(); // Extract the unit (H or M)
+
+                    if (isNaN(timeValue) || timeValue <= 0 || (unit !== 'H' && unit !== 'M')) {
+                        speak("Please enter a valid time in hours or minutes.");
+                        alert("Please enter a valid time in hours (e.g., 1.5H) or minutes (e.g., 30M).");
+                        return;
+                    }
+
+                    let additionalTimeInMs;
+                    if (unit === 'H') {
+                        additionalTimeInMs = timeValue * 3600 * 1000; // Convert hours to milliseconds
+                    } else {
+                        additionalTimeInMs = timeValue * 60 * 1000; // Convert minutes to milliseconds
+                    }
+
+                    // Add additional time to the remaining time
+                    step.remainingTime += additionalTimeInMs / 1000;
+                    step.startTime = new Date().getTime(); // Reset startTime
+                    step.timerRunning = true;
+                    startStepTimer(taskIndex, stepIndex);
+                    return; // Exit the interval function
+                } else {
+                    speak("You have successfully completed the task.");
+                    alert("You have successfully completed the task.");
+                }
+
+
+                popup.style.display = "none"; // Hide popup
+                speak("Time's up!");
+                alert("Time's up!");
+                updateTargetTimer(step.elapsedTime, step.text); // Update target timer
+                renderTasks();
+                saveTasks();
+            }
+        }, 1000);
+    }
+
+    // Start timer when the popup is shown
+    startStepTimer(taskIndex, stepIndex);
 }
 
-// Modify the toggleStepTimer function to clear the interval when stopping
+// Modify the toggleStepTimer function to handle completion and more time
 function toggleStepTimer(taskIndex, stepIndex) {
     const step = tasks[taskIndex].steps[stepIndex];
     step.timerRunning = !step.timerRunning;
-    
+
     if (step.timerRunning) {
-        step.startTime = new Date().getTime() - (step.elapsedTime * 1000);
-        showStepTimerPopup(taskIndex, stepIndex);
+        speak("How much time do you need to complete this step (in hours or minutes)?");
+        const timeNeeded = prompt("How much time do you need to complete this step (in hours [H] or minutes [M])?");
+        if (timeNeeded !== null) {
+            const timeValue = parseFloat(timeNeeded.slice(0, -1)); // Extract the number
+            const unit = timeNeeded.slice(-1).toUpperCase(); // Extract the unit (H or M)
+           if (isNaN(timeValue) || timeValue <= 0 || (unit !== 'H' && unit !== 'M')) {
+                speak("Please enter a valid time in hours or minutes.");
+                alert("Please enter a valid time in hours (e.g., 1.5H) or minutes (e.g., 30M).");
+                return;
+            }
+
+            let timeInMs;
+            if (unit === 'H') {
+                timeInMs = timeValue * 3600 * 1000; // Convert hours to milliseconds
+            } else {
+                timeInMs = timeValue * 60 * 1000; // Convert minutes to milliseconds
+            }
+
+            // Store the initial time and set remaining time to initial time
+            step.initialTime = timeInMs / 1000; // Store in seconds
+            step.remainingTime = step.initialTime;
+
+            step.startTime = new Date().getTime(); // Start the timer
+            showStepTimerPopup(taskIndex, stepIndex);
+        }
     } else {
         hideStepTimerPopup();
         clearInterval(step.timerInterval);
         const now = new Date().getTime();
         const elapsedSinceStart = now - step.startTime;
-        step.elapsedTime = Math.floor(elapsedSinceStart / 1000);
-        updateTargetTimer(step.elapsedTime, step.text);
+        step.elapsedTime = Math.floor(elapsedSinceStart / 1000); // Update elapsed time
+
+        // Prompt for additional time when timer is stopped
+        speak("Do you need more time (in hours or minutes)?");
+        const additionalTime = prompt("Do you need more time (in hours [H] or minutes [M])?");
+        if (additionalTime !== null) {
+            const timeValue = parseFloat(additionalTime.slice(0, -1)); // Extract the number
+            const unit = additionalTime.slice(-1).toUpperCase(); // Extract the unit (H or M)
+
+            if (isNaN(timeValue) || timeValue <= 0 || (unit !== 'H' && unit !== 'M')) {
+                speak("Please enter a valid time in hours or minutes.");
+                alert("Please enter a valid time in hours (e.g., 1.5H) or minutes (e.g., 30M).");
+                return;
+            }
+
+            let additionalTimeInMs;
+            if (unit === 'H') {
+                additionalTimeInMs = timeValue * 3600 * 1000; // Convert hours to milliseconds
+            } else {
+                additionalTimeInMs = timeValue * 60 * 1000; // Convert minutes to milliseconds
+            }
+
+            // Add additional time to the remaining time
+            step.remainingTime += additionalTimeInMs / 1000;
+            step.startTime = new Date().getTime(); // Reset startTime
+            step.timerRunning = true; // Restart the timer
+            showStepTimerPopup(taskIndex, stepIndex);
+            return; // Exit the function
+        } else {
+            step.completed = true; // Mark the step as complete
+            updateTargetTimer(step.elapsedTime, step.text); // Update target timer
+        }
+
+        renderTasks();
+        saveTasks();
     }
-    
-    renderTasks();
-    saveTasks();
 }
 
 // Modify the startTimer function
@@ -209,10 +356,11 @@ function startTimer() {
         const remainingSeconds = Math.max(0, Math.floor((timerState.endTime - now) / 1000));
         updateTimerDisplay(remainingSeconds);
         updateCircle(remainingSeconds, timerState.initialSeconds);
-        
+
         if (remainingSeconds <= 0) {
             clearInterval(targetTimer);
             timerState.running = false;
+            speak('Target time reached!');
             alert('Target time reached!');
         }
         saveTimerState();
@@ -222,16 +370,17 @@ function startTimer() {
 startTargetTimer.addEventListener('click', () => {
     const hours = parseFloat(targetTimeInput.value);
     if (isNaN(hours) || hours <= 0) {
-        alert('Please enter a valid time in hours.');
+        speak('Please enter a valid time in hours or minutes.');
+        alert('Please enter a valid time in hours or minutes.');
         return;
     }
-    
+
     const now = new Date().getTime();
     timerState.endTime = now + hours * 3600 * 1000;
     timerState.initialSeconds = Math.floor(hours * 3600);
     timerState.running = true;
     timerState.stepTimers = []; // Reset step timers
-    
+
     updateTimerDisplay(timerState.initialSeconds);
     updateCircle(timerState.initialSeconds, timerState.initialSeconds);
     updateStepSegments();
@@ -358,7 +507,8 @@ taskList.addEventListener('click', (e) => {
 });
 
 function addStep(taskIndex) {
-    const stepText = prompt('Enter step description:');
+    speak("What's the name of this step?");
+    const stepText = prompt('Enter step name:');
     if (stepText) {
         tasks[taskIndex].steps.push({ text: stepText, elapsedTime: 0, timerRunning: false, completed: false });
         renderTasks();
@@ -437,12 +587,15 @@ function renderRoutines(day) {
     markDayCompleteBtn.addEventListener('click', () => {
         const completedRoutines = routineList.querySelectorAll('input[type="checkbox"]:checked');
         if (completedRoutines.length === routineList.children.length && routineList.children.length > 0) {
+            speak("Great job! You've completed all routines for today.");
             alert(`Great job! You've completed all routines for today.`);
             updateTrackerCalendar();
-            routines[day].forEach(routine => routine.completed = true);
+            routines[day].forEach(routine => routine.completed = true
+            );
             saveRoutines();
             createCalendar(currentYear, currentMonth);
         } else {
+            speak('Please complete all routines before marking the day as complete.');
             alert('Please complete all routines before marking the day as complete.');
         }
     });
@@ -503,7 +656,7 @@ function createCalendar(year, month) {
         const calendarDay = document.createElement('div');
         calendarDay.className = 'calendar-day';
         const dateString = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-        
+
         if (dateString === todayString) {
             calendarDay.classList.add('current-day');
             if (completedDays[dateString]) {
@@ -515,7 +668,7 @@ function createCalendar(year, month) {
         } else if (completedDays[dateString]) {
             calendarDay.classList.add('past-completed');
         }
-        
+
         calendarDay.textContent = day;
         trackerCalendar.appendChild(calendarDay);
     }
@@ -528,7 +681,7 @@ function updateTrackerCalendar() {
     const dateString = today.toISOString().split('T')[0];
     completedDays[dateString] = true;
     localStorage.setItem(getUserKey('completedDays'), JSON.stringify(completedDays));
-    
+
     createCalendar(today.getFullYear(), today.getMonth());
 }
 
@@ -537,12 +690,19 @@ const summaryDisplay = document.getElementById('summary-display');
 function updateDaySummary() {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
-    
-    if (now.getHours() === 23 && now.getMinutes() === 59) {
+
+    // Reset total time and completed tasks at the beginning of the day
+    let totalTime = 0;
+    let completedTasksList = '';
+
+    // Check if the day has changed and reset the timer if needed
+    if (now.getHours() === 0 && now.getMinutes() === 0) {
+        // Reset step timers and elapsed times
         tasks.forEach(task => {
             task.steps.forEach(step => {
                 step.elapsedTime = 0;
                 step.timerRunning = false;
+                
                 if (step.timerInterval) {
                     clearInterval(step.timerInterval);
                 }
@@ -550,31 +710,72 @@ function updateDaySummary() {
         });
         saveTasks();
         renderTasks();
+
+        // Reset target timer state
+        timerState = {
+            running: false,
+            endTime: 0,
+            initialSeconds: 0,
+            stepTimers: []
+        };
+        saveTimerState();
     }
-    
-    let totalTime = 0;
-    const completedTasksList = tasks.map(task => {
+
+    // Calculate total time and completed tasks for the current day
+    tasks.forEach(task => {
         const taskTime = task.steps.reduce((acc, step) => acc + step.elapsedTime, 0);
         totalTime += taskTime;
-        return `<li>${task.text} - ${formatTime(taskTime)}</li>`;
-    }).join('');
-    
+        if (task.completed) {
+            completedTasksList += `<li>${task.text} - ${formatTime(taskTime)}</li>`;
+        }
+    });
+
+    // Format the summary string
     const hours = Math.floor(totalTime / 3600);
     const minutes = Math.floor((totalTime % 3600) / 60);
-    
     const summary = `
         <h3>Today's Summary (${now.toLocaleDateString()}):</h3>
         <p>Total Productive Time: ${hours} hours ${minutes} minutes</p>
         <h4>Completed Tasks:</h4>
         <ul>${completedTasksList}</ul>
     `;
-    
+
+    // Update the summary display
     summaryDisplay.innerHTML = summary;
-    
+
+    // Save the summary for the current day if it's past 11 pm
     if (now.getHours() >= 23) {
         localStorage.setItem(getUserKey(`summary_${today}`), summary);
     }
 }
+
+
+// Function to retrieve past summary
+function getPastSummary(dateString) {
+    const storedSummary = localStorage.getItem(getUserKey(`summary_${dateString}`));
+    if (storedSummary) {
+        summaryDisplay.innerHTML = storedSummary;
+        return true; // Summary found
+    } else {
+        speak("No summary found for the given date.");
+        alert("No summary found for the given date.");
+        return false; // Summary not found
+    }
+}
+
+// Add a button to get past summary
+const getPastSummaryBtn = document.createElement('button');
+getPastSummaryBtn.textContent = 'Get Past Summary';
+getPastSummaryBtn.className = 'btn btn-primary mt-3';
+summaryDisplay.parentNode.insertBefore(getPastSummaryBtn, summaryDisplay);
+
+getPastSummaryBtn.addEventListener('click', () => {
+    const dateInput = prompt('Enter the date (YYYY-MM-DD):');
+    if (dateInput) {
+        const dateString = dateInput.trim();
+        getPastSummary(dateString); 
+    }
+});
 
 loadRoutines();
 renderTasks();
@@ -597,6 +798,7 @@ selectRandomTaskBtn.addEventListener('click', () => {
         const randomTask = tasks[Math.floor(Math.random() * tasks.length)];
         showRandomTaskPopup(randomTask.text);
     } else {
+        speak('No tasks available to select from.');
         alert('No tasks available to select from.');
     }
 });
@@ -659,3 +861,7 @@ loadTasks();
 function saveTimerState() {
     localStorage.setItem(getUserKey('timerState'), JSON.stringify(timerState));
 }
+
+
+
+
