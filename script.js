@@ -156,7 +156,6 @@ function showStepTimerPopup(taskIndex, stepIndex) {
             clearInterval(step.timerInterval);
             pauseTime = new Date().getTime(); // Store pause time
             speak('Why are you stopping your productive task?');
-            prompt('Why are you stopping your productive task?');
             pauseRestartTimer = setInterval(() => {
                 timeLost = Math.floor((new Date().getTime() - pauseTime) / 1000);
                 pauseBtn.textContent = `Restart Timer`;
@@ -166,7 +165,12 @@ function showStepTimerPopup(taskIndex, stepIndex) {
             // Restart from pause
             clearInterval(pauseRestartTimer);
             speak(`You have lost ${formatTime(timeLost)} of your productive time, What did you do during that time?`);
-            const reason = prompt(`You have lost ${formatTime(timeLost)} of your productive time, What did you do during that time?`);
+            let reason = prompt(`You have lost ${formatTime(timeLost)} of your productive time, What did you do during that time?`);
+
+            while (reason !== "productive" && reason !== "not productive") { // Keep prompting until valid input
+                speak("Please enter 'productive' or 'not productive'.");
+                reason = prompt(`You have lost ${formatTime(timeLost)} of your productive time, What did you do during that time?`);
+            }
 
             if (reason === "productive") {
                 speak("You have done a productive task, so you can restart the timer.");
@@ -179,11 +183,6 @@ function showStepTimerPopup(taskIndex, stepIndex) {
                 // Restart after subtracting time lost from the paused time
                 step.elapsedTime += timeLost;
                 step.startTime = new Date().getTime() - (step.elapsedTime * 1000);
-            } else {
-                // Handle invalid input (user did not enter productive or not productive)
-                speak("Please enter 'productive' or 'not productive'.");
-                alert("Please enter 'productive' or 'not productive'.");
-                return; // Don't restart the timer
             }
             step.timerRunning = true; // Restart the timer
             startStepTimer(taskIndex, stepIndex);
@@ -228,16 +227,15 @@ function showStepTimerPopup(taskIndex, stepIndex) {
                 
                 // Prompt for additional time
                 speak("Time's up! Do you need more time (in hours or minutes)?");
-                const additionalTime = prompt("Time's up! Do you need more time (in hours [H] or minutes [M])?");
+                let additionalTime = prompt("Time's up! Do you need more time (in hours [H] or minutes [M])?");
+                while (additionalTime !== null && (isNaN(parseFloat(additionalTime.slice(0, -1))) || parseFloat(additionalTime.slice(0, -1)) <= 0 || (additionalTime.slice(-1).toUpperCase() !== 'H' && additionalTime.slice(-1).toUpperCase() !== 'M'))) { // Keep prompting until valid input
+                    speak("Please enter a valid time in hours or minutes (e.g., 1.5H or 30M).");
+                    additionalTime = prompt("Time's up! Do you need more time (in hours [H] or minutes [M])?");
+                } 
+
                 if (additionalTime !== null && additionalTime !== "no") {
                     const timeValue = parseFloat(additionalTime.slice(0, -1)); // Extract the number
                     const unit = additionalTime.slice(-1).toUpperCase(); // Extract the unit (H or M)
-
-                    if (isNaN(timeValue) || timeValue <= 0 || (unit !== 'H' && unit !== 'M')) {
-                        speak("Please enter a valid time in hours or minutes.");
-                        alert("Please enter a valid time in hours (e.g., 1.5H) or minutes (e.g., 30M).");
-                        return;
-                    }
 
                     let additionalTimeInMs;
                     if (unit === 'H') {
@@ -246,8 +244,9 @@ function showStepTimerPopup(taskIndex, stepIndex) {
                         additionalTimeInMs = timeValue * 60 * 1000; // Convert minutes to milliseconds
                     }
 
-                    // Add additional time to the remaining time
-                    step.remainingTime += additionalTimeInMs / 1000;
+                    // Add additional time to the remaining time and reset the timer
+                    step.initialTime += additionalTimeInMs / 1000; // Update initialTime
+                    step.remainingTime = step.initialTime; // Set remaining time to new initial time
                     step.startTime = new Date().getTime(); // Reset startTime
                     step.timerRunning = true;
                     startStepTimer(taskIndex, stepIndex);
@@ -279,7 +278,11 @@ function toggleStepTimer(taskIndex, stepIndex) {
 
     if (step.timerRunning) {
         speak("How much time do you need to complete this step (in hours or minutes)?");
-        const timeNeeded = prompt("How much time do you need to complete this step (in hours [H] or minutes [M])?");
+        let timeNeeded = prompt("How much time do you need to complete this step (in hours [H] or minutes [M])?");
+        while (isNaN(parseFloat(timeNeeded.slice(0, -1))) || parseFloat(timeNeeded.slice(0, -1)) <= 0 || (timeNeeded.slice(-1).toUpperCase() !== 'H' && timeNeeded.slice(-1).toUpperCase() !== 'M')) { 
+            speak("Please enter a valid time in hours (e.g., 1.5H) or minutes (e.g., 30M).");
+            timeNeeded = prompt("How much time do you need to complete this step (in hours [H] or minutes [M])?");
+        } 
         if (timeNeeded !== null) {
             const timeValue = parseFloat(timeNeeded.slice(0, -1)); // Extract the number
             const unit = timeNeeded.slice(-1).toUpperCase(); // Extract the unit (H or M)
@@ -312,16 +315,14 @@ function toggleStepTimer(taskIndex, stepIndex) {
 
         // Prompt for additional time when timer is stopped
         speak("Do you need more time (in hours or minutes)?");
-        const additionalTime = prompt("Do you need more time (in hours [H] or minutes [M])?");
+        let additionalTime = prompt("Do you need more time (in hours [H] or minutes [M])?");
+        while (additionalTime !== null && (isNaN(parseFloat(additionalTime.slice(0, -1))) || parseFloat(additionalTime.slice(0, -1)) <= 0 || (additionalTime.slice(-1).toUpperCase() !== 'H' && additionalTime.slice(-1).toUpperCase() !== 'M'))) {
+            speak("Please enter a valid time in hours (e.g., 1.5H) or minutes (e.g., 30M).");
+            additionalTime = prompt("Do you need more time (in hours [H] or minutes [M])?");
+        } 
         if (additionalTime !== null) {
             const timeValue = parseFloat(additionalTime.slice(0, -1)); // Extract the number
             const unit = additionalTime.slice(-1).toUpperCase(); // Extract the unit (H or M)
-
-            if (isNaN(timeValue) || timeValue <= 0 || (unit !== 'H' && unit !== 'M')) {
-                speak("Please enter a valid time in hours or minutes.");
-                alert("Please enter a valid time in hours (e.g., 1.5H) or minutes (e.g., 30M).");
-                return;
-            }
 
             let additionalTimeInMs;
             if (unit === 'H') {
@@ -331,7 +332,8 @@ function toggleStepTimer(taskIndex, stepIndex) {
             }
 
             // Add additional time to the remaining time
-            step.remainingTime += additionalTimeInMs / 1000;
+            step.initialTime += additionalTimeInMs / 1000; // Update initialTime
+            step.remainingTime = step.initialTime; // Set remaining time to new initial time
             step.startTime = new Date().getTime(); // Reset startTime
             step.timerRunning = true; // Restart the timer
             showStepTimerPopup(taskIndex, stepIndex);
@@ -345,6 +347,7 @@ function toggleStepTimer(taskIndex, stepIndex) {
         saveTasks();
     }
 }
+
 
 // Modify the startTimer function
 function startTimer() {
@@ -787,6 +790,13 @@ setInterval(updateDaySummary, 1000);
 const currentDay = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][currentDate.getDay()];
 daySelect.value = currentDay;
 renderRoutines(currentDay);
+
+// Speak a message about the daily routine
+if (routines[currentDay] && routines[currentDay].length > 0) {
+    speak(`Today's routine is: ${routines[currentDay].map(routine => routine.text).join(', ')}`);
+} else {
+    speak("You have not added any routine for the day, please add the routine and be productive.");
+}
 
 const selectRandomTaskBtn = document.createElement('button');
 selectRandomTaskBtn.textContent = 'Select Random Task';
