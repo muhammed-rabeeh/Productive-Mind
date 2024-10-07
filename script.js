@@ -245,8 +245,8 @@ function showStepTimerPopup(taskIndex, stepIndex) {
                     }
 
                     // Add additional time to the remaining time and reset the timer
-                    step.initialTime += additionalTimeInMs / 1000; // Update initialTime
-                    step.remainingTime = step.initialTime; // Set remaining time to new initial time
+                    step.initialTime = additionalTimeInMs / 1000; // Reset initialTime to the additional time
+                    step.remainingTime = step.initialTime; // Set remaining time to the new initial time
                     step.startTime = new Date().getTime(); // Reset startTime
                     step.timerRunning = true;
                     startStepTimer(taskIndex, stepIndex);
@@ -793,7 +793,12 @@ renderRoutines(currentDay);
 
 // Speak a message about the daily routine
 if (routines[currentDay] && routines[currentDay].length > 0) {
-    speak(`Today's routine is: ${routines[currentDay].map(routine => routine.text).join(', ')}`);
+    const completedRoutinesCount = routines[currentDay].filter(routine => routine.completed).length;
+    if (completedRoutinesCount === routines[currentDay].length) {
+        speak(`Today's routine is: ${routines[currentDay].map(routine => routine.text).join(', ')}. You've already completed all routines for today. Great job!`);
+    } else {
+        speak(`Today's routine is: ${routines[currentDay].map(routine => routine.text).join(', ')}. You have ${routines[currentDay].length - completedRoutinesCount} routine tasks remaining.`);
+    }
 } else {
     speak("You have not added any routine for the day, please add the routine and be productive.");
 }
