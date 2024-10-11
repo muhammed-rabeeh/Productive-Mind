@@ -198,6 +198,7 @@ function showStepTimerPopup(taskIndex, stepIndex) {
             const now = new Date().getTime();
             const totalElapsed = Math.floor((now - step.startTime) / 1000);
             step.elapsedTime = totalElapsed; // Keep track of actual elapsed time
+
             step.remainingTime = step.initialTime - totalElapsed; // Calculate remaining time
             popup.querySelector('.step-timer-display').textContent = formatTime(step.remainingTime); // Display remaining time
 
@@ -249,6 +250,7 @@ function showStepTimerPopup(taskIndex, stepIndex) {
                     step.remainingTime = step.initialTime; // Set remaining time to the new initial time
                     step.startTime = new Date().getTime(); // Reset startTime
                     step.timerRunning = true;
+                    step.totalTime += additionalTimeInMs / 1000;
                     startStepTimer(taskIndex, stepIndex);
                     return; // Exit the interval function
                 } else {
@@ -260,7 +262,7 @@ function showStepTimerPopup(taskIndex, stepIndex) {
                 popup.style.display = "none"; // Hide popup
                 speak("Time's up!");
                 alert("Time's up!");
-                updateTargetTimer(step.elapsedTime, step.text); // Update target timer
+                updateTargetTimer(step.totalTime, step.text); // Update target timer
                 renderTasks();
                 saveTasks();
             }
@@ -302,7 +304,7 @@ function toggleStepTimer(taskIndex, stepIndex) {
             // Store the initial time and set remaining time to initial time
             step.initialTime = timeInMs / 1000; // Store in seconds
             step.remainingTime = step.initialTime;
-
+            step.totalTime = step.initialTime;
             step.startTime = new Date().getTime(); // Start the timer
             showStepTimerPopup(taskIndex, stepIndex);
         }
@@ -312,7 +314,7 @@ function toggleStepTimer(taskIndex, stepIndex) {
         const now = new Date().getTime();
         const elapsedSinceStart = now - step.startTime;
         step.elapsedTime = Math.floor(elapsedSinceStart / 1000); // Update elapsed time
-
+        step.totalTime += step.elapsedTime;
         // Prompt for additional time when timer is stopped
         speak("Do you need more time (in hours or minutes)?");
         let additionalTime = prompt("Do you need more time (in hours [H] or minutes [M])?");
@@ -333,6 +335,7 @@ function toggleStepTimer(taskIndex, stepIndex) {
 
             // Add additional time to the remaining time
             step.initialTime += additionalTimeInMs / 1000; // Update initialTime
+            step.totalTime += additionalTimeInMs / 1000;
             step.remainingTime = step.initialTime; // Set remaining time to new initial time
             step.startTime = new Date().getTime(); // Reset startTime
             step.timerRunning = true; // Restart the timer
@@ -462,7 +465,7 @@ function createStepItem(step, taskIndex, stepIndex) {
                 <button class="btn btn-sm btn-outline-danger remove-step" data-task-index="${taskIndex}" data-step-index="${stepIndex}">Remove</button>
             </div>
         </div>
-        <div class="step-timer mt-2">Time: ${formatTime(step.elapsedTime)}</div>
+        <div class="step-timer mt-2">Time: ${formatTime(step.totalTime)}</div>
     `;
     return stepItem;
 }
@@ -513,7 +516,7 @@ function addStep(taskIndex) {
     speak("What's the name of this step?");
     const stepText = prompt('Enter step name:');
     if (stepText) {
-        tasks[taskIndex].steps.push({ text: stepText, elapsedTime: 0, timerRunning: false, completed: false });
+        tasks[taskIndex].steps.push({ text: stepText, elapsedTime: 0, timerRunning: false, completed: false, totalTime: 0 });
         renderTasks();
         saveTasks();
     }
