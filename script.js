@@ -351,7 +351,6 @@ function toggleStepTimer(taskIndex, stepIndex) {
     }
 }
 
-popup.style.display = "none";
 // Modify the startTimer function
 function startTimer() {
     clearInterval(targetTimer);
