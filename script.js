@@ -383,7 +383,6 @@ function toggleStepTimer(taskIndex, stepIndex) {
     }
 }
 
-
 // Modify the startTimer function
 function startTimer() {
     clearInterval(targetTimer);
