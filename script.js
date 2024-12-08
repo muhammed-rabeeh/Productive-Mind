@@ -10,23 +10,48 @@ const pointsDisplay = document.getElementById('points-display'); // Get the poin
 
 let dailyPoints = 0; // Initialize daily points
 let routinePoints = 10; // Points per completed routine
-let morningBonusPoints = 25; // Points for logging in between 5-5:30 AM
-let taskPoints = 50; // Points per completed task
+let morningBonusPoints = 50; // Points for logging in between 5-5:30 AM
+let taskPoints = 25; // Points per completed task
 let stepPoints = 20; // Points per completed step
+let totalTime = 0; // Total time spent on tasks
+let totalDailyPoints = 0; // Total daily points
 
 // Function to award points
 function awardPoints(amount, message) {
     dailyPoints += amount;
-    pointsDisplay.textContent = dailyPoints; // Update the points display
+    updatePointsDisplay(); // Update the points display
     speak(`${message}`);
     console.log(`Awarded ${amount} points. Total: ${dailyPoints}.  ${message}`);
+}
+
+function calculateTotalDailyPoints() {
+    let total = morningBonusPoints; // Start with morning bonus
+
+    // Add points for completed tasks
+    tasks.forEach(task => total += taskPoints);
+
+    // Add points for completed routines
+    if (routines[currentDay]) {
+        total += routines[currentDay].length * routinePoints;
+    }
+
+    totalDailyPoints = total;
+    updatePointsDisplay(); // Update the points display
+}
+
+function updatePointsDisplay() {
+    pointsDisplay.textContent = dailyPoints + "/" + totalDailyPoints;
+    localStorage.setItem(getUserKey('dailyPoints'), dailyPoints);
+    localStorage.setItem(getUserKey('totalDailyPoints'), totalDailyPoints);
 }
 
 // Check for morning bonus
 const now = new Date();
 const hours = now.getHours();
 const minutes = now.getMinutes();
+console.log("hours: " + hours + " minutes: " + minutes);
 if (hours === 5 && minutes >= 0 && minutes <= 30) {
+    totalTime=0;
     awardPoints(morningBonusPoints, "Morning bonus awarded!");
 }
 
@@ -150,6 +175,8 @@ function speak(text) {
     const utterance = new SpeechSynthesisUtterance(text);
     speechSynthesis.speak(utterance);
 }
+
+
 
 
 // Modify the showStepTimerPopup function
@@ -453,6 +480,7 @@ function addTask() {
         saveTasks();
         taskInput.value = '';
     }
+    calculateTotalDailyPoints();
 }
 
 function renderTasks() {
@@ -515,7 +543,6 @@ function formatTime(seconds) {
 // Modify saveTasks to update points when a task is completed.
 function saveTasks() {
     localStorage.setItem(getUserKey('tasks'), JSON.stringify(tasks));
-    // Update points if a task is completed
     tasks.forEach(task => {
         if (task.completed) {
             awardPoints(taskPoints, `Task "${task.text}" completed!`);
@@ -546,11 +573,13 @@ taskList.addEventListener('click', (e) => {
         const taskIndex = e.target.closest('.task-item').querySelector('.add-step').dataset.taskIndex;
         tasks[taskIndex].completed = e.target.checked;
         saveTasks();
+        calculateTotalDailyPoints();
     } else if (e.target.classList.contains('step-checkbox')) {
         const taskIndex = e.target.closest('.task-item').querySelector('.add-step').dataset.taskIndex;
         const stepIndex = e.target.closest('.step-item').querySelector('.toggle-step-timer').dataset.stepIndex;
         tasks[taskIndex].steps[stepIndex].completed = e.target.checked;
         saveTasks();
+        calculateTotalDailyPoints();
     }
 });
 
@@ -561,6 +590,7 @@ function addStep(taskIndex) {
         tasks[taskIndex].steps.push({ text: stepText, elapsedTime: 0, timerRunning: false, completed: false, totalTime: 0 });
         renderTasks();
         saveTasks();
+        calculateTotalDailyPoints();
     }
 }
 
@@ -622,6 +652,7 @@ function renderRoutines(day) {
     }
 
     addRoutineBtn.addEventListener('click', () => {
+        
         const routineText = routineInput.value.trim();
         if (routineText) {
             if (!routines[day]) {
@@ -632,6 +663,7 @@ function renderRoutines(day) {
             saveRoutines();
             routineInput.value = '';
         }
+        calculateTotalDailyPoints();
     });
 
     markDayCompleteBtn.addEventListener('click', () => {
@@ -658,6 +690,7 @@ function renderRoutines(day) {
             routines[day][index].completed = e.target.checked;
             if (e.target.checked) { // Award points only when checked
                 awardPoints(routinePoints, `Routine "${routines[day][index].text}" completed!`);
+                calculateTotalDailyPoints();
             }
             saveRoutines();
         }
@@ -743,12 +776,10 @@ const summaryDisplay = document.getElementById('summary-display');
 
 const today = now.toISOString().split('T')[0];
 
-function updateDaySummary() {
+// Reset total time and completed tasks at the beginning of the day
 
-    // Reset total time and completed tasks at the beginning of the day
-    let totalTime = 0;
-    let completedTasksList = '';
-    const taskPoints = 50; // Points per completed task
+
+function updateDaySummary() {
 
     // Check if the day has changed and reset the timer if needed
     if (now.getHours() === 0 && now.getMinutes() === 0) {
@@ -765,7 +796,6 @@ function updateDaySummary() {
         });
         saveTasks();
         renderTasks();
-        dailyPoints = 0;
 
         // Reset target timer state
         timerState = {
@@ -777,15 +807,7 @@ function updateDaySummary() {
         saveTimerState();
     }
 
-    // Calculate total time and completed tasks for the current day
-    tasks.forEach(task => {
-        const taskTime = task.steps.reduce((acc, step) => acc + step.elapsedTime, 0);
-        totalTime += taskTime;
-        if (task.completed) {
-            completedTasksList += `<li>${task.text} - ${formatTime(taskTime)}</li>`;
-            awardPoints(taskPoints, `Task "${task.text}" completed.`);
-        }
-    });
+
 
     // Format the summary string
     const hours = Math.floor(totalTime / 3600);
@@ -806,9 +828,21 @@ function updateDaySummary() {
         localStorage.setItem(getUserKey(`summary_${today}`), summary);
         localStorage.setItem(getUserKey(`points_${today}`), dailyPoints); //store daily points
         dailyPoints = 0; // Reset points for the next day
-        pointsDisplay.textContent = 0;
+        updatePointsDisplay();
     }
 }
+
+let completedTasksList = '';
+
+// Calculate total time and completed tasks for the current day
+tasks.forEach(task => {
+    const taskTime = task.steps.reduce((acc, step) => acc + step.elapsedTime, 0);
+    totalTime += taskTime;
+    if (task.completed) {
+        completedTasksList += `<li>${task.text} - ${formatTime(taskTime)}</li>`;
+        awardPoints(taskPoints, `Task "${task.text}" completed.`);
+    }
+});
 
 // Display a success popup if all routines are done before 11 PM
 if (now.getHours() < 23 && routines[currentDay] && routines[currentDay].every(routine => routine.completed)) { //changed
@@ -880,14 +914,14 @@ loadRoutines();
 renderTasks();
 createCalendar(currentYear, currentMonth);
 
-// Add event listener to update points on page load (Moved here to the end)
-window.addEventListener('load', () => {
-    const storedPoints = localStorage.getItem(getUserKey(`points_${today}`));
-    if (storedPoints) {
-        dailyPoints = parseInt(storedPoints);
-        pointsDisplay.textContent = dailyPoints;
-    }
-});
+// // Add event listener to update points on page load (Moved here to the end)
+// window.addEventListener('load', () => {
+//     const storedPoints = localStorage.getItem(getUserKey(`points_${today}`));
+//     if (storedPoints) {
+//         dailyPoints = parseInt(storedPoints);
+//         pointsDisplay.textContent = dailyPoints + "/" + totalDailyPoints;
+//     }
+// });
 
 //Ensure pointsDisplay is defined before use. Add this check near the top
 if (!pointsDisplay) {
@@ -925,6 +959,7 @@ selectRandomTaskBtn.addEventListener('click', () => {
     if (tasks.length > 0) {
         const randomTask = tasks[Math.floor(Math.random() * tasks.length)];
         showRandomTaskPopup(randomTask.text);
+        speak(`You have selected ${randomTask.text} task, Complete the task steps as soon as possible.`);
     } else {
         speak('No tasks available to select from.');
         alert('No tasks available to select from.');
@@ -982,6 +1017,7 @@ function loadTasks() {
     tasks = JSON.parse(localStorage.getItem(getUserKey('tasks'))) || [];
     renderTasks();
     initializeStepTimers();
+    calculateTotalDailyPoints();
 }
 
 loadTasks();
@@ -993,3 +1029,16 @@ function saveTimerState() {
 
 
 
+//Load points from local storage on page load.  Move this to the very end.
+window.addEventListener('load', () => {
+    const storedDailyPoints = localStorage.getItem(getUserKey('dailyPoints'));
+    const storedTotalDailyPoints = localStorage.getItem(getUserKey('totalDailyPoints'));
+    if (storedDailyPoints) {
+        dailyPoints = parseInt(storedDailyPoints);
+    }
+    if (storedTotalDailyPoints) {
+        totalDailyPoints = parseInt(storedTotalDailyPoints);
+    }
+    updatePointsDisplay();
+    
+});
