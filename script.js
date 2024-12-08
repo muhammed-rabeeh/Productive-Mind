@@ -5,6 +5,30 @@ const targetTimeInput = document.getElementById('target-time');
 const targetTimerDisplay = document.getElementById('target-timer-display');
 const timerCircle = document.getElementById('timer-circle');
 const circleCircumference = 2 * Math.PI * 90; // 2πr
+const pointsDisplay = document.getElementById('points-display'); // Get the points display element
+
+
+let dailyPoints = 0; // Initialize daily points
+let routinePoints = 10; // Points per completed routine
+let morningBonusPoints = 25; // Points for logging in between 5-5:30 AM
+let taskPoints = 50; // Points per completed task
+let stepPoints = 20; // Points per completed step
+
+// Function to award points
+function awardPoints(amount, message) {
+    dailyPoints += amount;
+    pointsDisplay.textContent = dailyPoints; // Update the points display
+    speak(`${message}`);
+    console.log(`Awarded ${amount} points. Total: ${dailyPoints}.  ${message}`);
+}
+
+// Check for morning bonus
+const now = new Date();
+const hours = now.getHours();
+const minutes = now.getMinutes();
+if (hours === 5 && minutes >= 0 && minutes <= 30) {
+    awardPoints(morningBonusPoints, "Morning bonus awarded!");
+}
 
 // Load timer state from local storage
 const currentUser = localStorage.getItem('currentUser');
@@ -156,6 +180,12 @@ function showStepTimerPopup(taskIndex, stepIndex) {
             clearInterval(step.timerInterval);
             pauseTime = new Date().getTime(); // Store pause time
             speak('Why are you stopping your productive task?');
+            let reason = prompt('Why are you stopping your productive task?')
+            while (reason === "") { // Keep prompting until valid input
+                speak("Please enter a valid reason.");
+                reason = prompt(`Why are you stopping your productive task?`);
+            }
+            speak("You are going to waste your productive time. Please comeback as soon as possible.");
             pauseRestartTimer = setInterval(() => {
                 timeLost = Math.floor((new Date().getTime() - pauseTime) / 1000);
                 pauseBtn.textContent = `Restart Timer`;
@@ -230,6 +260,9 @@ function showStepTimerPopup(taskIndex, stepIndex) {
                 speak("Time's up! Do you need more time (in hours or minutes)?");
                 let additionalTime = prompt("Time's up! Do you need more time (in hours [H] or minutes [M])?");
                 while (additionalTime !== null && (isNaN(parseFloat(additionalTime.slice(0, -1))) || parseFloat(additionalTime.slice(0, -1)) <= 0 || (additionalTime.slice(-1).toUpperCase() !== 'H' && additionalTime.slice(-1).toUpperCase() !== 'M'))) { // Keep prompting until valid input
+                    if(additionalTime === "no"){
+                        break;
+                    }
                     speak("Please enter a valid time in hours or minutes (e.g., 1.5H or 30M).");
                     additionalTime = prompt("Time's up! Do you need more time (in hours [H] or minutes [M])?");
                 } 
@@ -260,8 +293,6 @@ function showStepTimerPopup(taskIndex, stepIndex) {
 
 
                 popup.style.display = "none"; // Hide popup
-                speak("Time's up!");
-                alert("Time's up!");
                 updateTargetTimer(step.totalTime, step.text); // Update target timer
                 renderTasks();
                 saveTasks();
@@ -343,6 +374,7 @@ function toggleStepTimer(taskIndex, stepIndex) {
             return; // Exit the function
         } else {
             step.completed = true; // Mark the step as complete
+            awardPoints(stepPoints, `Step "${step.text}" of task "${tasks[taskIndex].text}" completed!`); //Award points here
             updateTargetTimer(step.elapsedTime, step.text); // Update target timer
         }
 
@@ -446,6 +478,10 @@ function renderTasks() {
         task.steps.forEach((step, stepIndex) => {
             const stepItem = createStepItem(step, taskIndex, stepIndex);
             stepList.appendChild(stepItem);
+            //Award points for already completed steps.
+            if (step.completed) {
+                awardPoints(stepPoints, `Step "${step.text}" of task "${task.text}" completed!`);
+            }
         });
         taskList.appendChild(li);
     });
@@ -477,8 +513,15 @@ function formatTime(seconds) {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
+// Modify saveTasks to update points when a task is completed.
 function saveTasks() {
     localStorage.setItem(getUserKey('tasks'), JSON.stringify(tasks));
+    // Update points if a task is completed
+    tasks.forEach(task => {
+        if (task.completed) {
+            awardPoints(taskPoints, `Task "${task.text}" completed!`);
+        }
+    });
 }
 
 taskList.addEventListener('click', (e) => {
@@ -538,6 +581,8 @@ const trackerCalendar = document.getElementById('tracker-calendar');
 const currentDate = new Date();
 const currentMonth = currentDate.getMonth();
 const currentYear = currentDate.getFullYear();
+const currentDay = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][currentDate.getDay()];
+
 
 daySelect.addEventListener('change', () => {
     const selectedDay = daySelect.value;
@@ -595,6 +640,7 @@ function renderRoutines(day) {
         if (completedRoutines.length === routineList.children.length && routineList.children.length > 0) {
             speak("Great job! You've completed all routines for today.");
             alert(`Great job! You've completed all routines for today.`);
+            awardPoints(completedRoutines.length * routinePoints, "All routines completed!");
             updateTrackerCalendar();
             routines[day].forEach(routine => routine.completed = true
             );
@@ -611,6 +657,9 @@ function renderRoutines(day) {
             const day = e.target.dataset.day;
             const index = parseInt(e.target.dataset.index);
             routines[day][index].completed = e.target.checked;
+            if (e.target.checked) { // Award points only when checked
+                awardPoints(routinePoints, `Routine "${routines[day][index].text}" completed!`);
+            }
             saveRoutines();
         }
     });
@@ -693,13 +742,14 @@ function updateTrackerCalendar() {
 
 const summaryDisplay = document.getElementById('summary-display');
 
+const today = now.toISOString().split('T')[0];
+
 function updateDaySummary() {
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
 
     // Reset total time and completed tasks at the beginning of the day
     let totalTime = 0;
     let completedTasksList = '';
+    const taskPoints = 50; // Points per completed task
 
     // Check if the day has changed and reset the timer if needed
     if (now.getHours() === 0 && now.getMinutes() === 0) {
@@ -716,6 +766,7 @@ function updateDaySummary() {
         });
         saveTasks();
         renderTasks();
+        dailyPoints = 0;
 
         // Reset target timer state
         timerState = {
@@ -733,6 +784,7 @@ function updateDaySummary() {
         totalTime += taskTime;
         if (task.completed) {
             completedTasksList += `<li>${task.text} - ${formatTime(taskTime)}</li>`;
+            awardPoints(taskPoints, `Task "${task.text}" completed.`);
         }
     });
 
@@ -742,6 +794,7 @@ function updateDaySummary() {
     const summary = `
         <h3>Today's Summary (${now.toLocaleDateString()}):</h3>
         <p>Total Productive Time: ${hours} hours ${minutes} minutes</p>
+        <p>Total Points Earned: ${dailyPoints}</p>
         <h4>Completed Tasks:</h4>
         <ul>${completedTasksList}</ul>
     `;
@@ -752,7 +805,48 @@ function updateDaySummary() {
     // Save the summary for the current day if it's past 11 pm
     if (now.getHours() >= 23) {
         localStorage.setItem(getUserKey(`summary_${today}`), summary);
+        localStorage.setItem(getUserKey(`points_${today}`), dailyPoints); //store daily points
+        dailyPoints = 0; // Reset points for the next day
+        pointsDisplay.textContent = 0;
     }
+}
+
+// Display a success popup if all routines are done before 11 PM
+if (now.getHours() < 23 && routines[currentDay] && routines[currentDay].every(routine => routine.completed)) { //changed
+    showSuccessPopup();
+}
+
+// Function to display a stylish success popup
+function showSuccessPopup() {
+    const popup = document.createElement('div');
+    popup.className = 'success-popup';
+    popup.innerHTML = `
+        <div class="success-popup-content">
+            <h2>Congratulations!</h2>
+            <p>You completed all your routines and earned ${dailyPoints} points!</p>
+            <button class="btn btn-primary close-popup">Close</button>
+        </div>
+    `;
+
+    popup.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: #4CAF50;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+    `;
+
+    document.body.appendChild(popup);
+
+    popup.addEventListener('click', function(event) {
+        if (event.target.classList.contains('close-popup')) {
+            this.remove();
+        }
+    });
 }
 
 
@@ -786,11 +880,28 @@ getPastSummaryBtn.addEventListener('click', () => {
 loadRoutines();
 renderTasks();
 createCalendar(currentYear, currentMonth);
+
+// Add event listener to update points on page load (Moved here to the end)
+window.addEventListener('load', () => {
+    const storedPoints = localStorage.getItem(getUserKey(`points_${today}`));
+    if (storedPoints) {
+        dailyPoints = parseInt(storedPoints);
+        pointsDisplay.textContent = dailyPoints;
+    }
+});
+
+//Ensure pointsDisplay is defined before use. Add this check near the top
+if (!pointsDisplay) {
+    console.error("points-display element not found in HTML. Please add it.");
+}
+
+
 updateDaySummary();
 
 setInterval(updateDaySummary, 1000);
 
-const currentDay = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][currentDate.getDay()];
+// const currentDay = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][currentDate.getDay()];
+
 daySelect.value = currentDay;
 renderRoutines(currentDay);
 

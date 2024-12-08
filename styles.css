@@ -6,6 +6,13 @@ body {
     padding-bottom: 20px;
 }
 
+#points-display {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #007bff; /* Blue color */
+    margin-left: 40px;
+}
+
 .container {
     max-width: 800px;
     background-color: rgba(0, 0, 0, 0.8);
