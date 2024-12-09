@@ -1046,7 +1046,7 @@ window.addEventListener('beforeunload', () => {
 function initializeStepTimers() {
     tasks.forEach((task, taskIndex) => {
         task.steps.forEach((step, stepIndex) => {
-            if (step.timerRunning) {
+            if (step.timerRunning && step.initialTime > 0) {
                 step.startTime = new Date().getTime() - (step.elapsedTime * 1000);
                 showStepTimerPopup(taskIndex, stepIndex);
             }
@@ -1056,6 +1056,12 @@ function initializeStepTimers() {
 
 function loadTasks() {
     tasks = JSON.parse(localStorage.getItem(getUserKey('tasks'))) || [];
+    tasks.forEach(task => {
+        task.steps.forEach(step => {
+            step.remainingTime = step.remainingTime || 0; // Set to 0 if undefined
+            step.initialTime = step.initialTime || 0;
+        });
+    });
     renderTasks();
     initializeStepTimers();
     calculateTotalDailyPoints();
