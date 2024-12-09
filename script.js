@@ -343,6 +343,12 @@ function toggleStepTimer(taskIndex, stepIndex) {
         while (isNaN(parseFloat(timeNeeded.slice(0, -1))) || parseFloat(timeNeeded.slice(0, -1)) <= 0 || (timeNeeded.slice(-1).toUpperCase() !== 'H' && timeNeeded.slice(-1).toUpperCase() !== 'M')) { 
             speak("Please enter a valid time in hours (e.g., 1.5H) or minutes (e.g., 30M).");
             timeNeeded = prompt("How much time do you need to complete this step (in hours [H] or minutes [M])?");
+        }
+        if (timeNeeded === null) { // Handle cancel explicitly
+            speak("Step timer canceled.");
+            step.remainingTime = 0; // Set a default value if canceled
+            step.timerRunning = false; // Set timerRunning to false
+            return; // Exit the function
         } 
         if (timeNeeded !== null) {
             const timeValue = parseFloat(timeNeeded.slice(0, -1)); // Extract the number
@@ -535,6 +541,9 @@ function createStepItem(step, taskIndex, stepIndex) {
 }
 
 function formatTime(seconds) {
+    if (isNaN(seconds)) { // Handle NaN gracefully
+        return "00:00:00"; // Or another suitable default
+    }
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
@@ -604,7 +613,7 @@ function addStep(taskIndex) {
     speak("What's the name of this step?");
     const stepText = prompt('Enter step name:');
     if (stepText) {
-        tasks[taskIndex].steps.push({ text: stepText, elapsedTime: 0, timerRunning: false, completed: false, totalTime: 0 });
+        tasks[taskIndex].steps.push({ text: stepText, elapsedTime: 0, timerRunning: false, completed: false, totalTime: 0, remainingTime: 0 });
         renderTasks();
         saveTasks();
         calculateTotalDailyPoints();
