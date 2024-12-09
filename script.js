@@ -24,6 +24,7 @@ function awardPoints(amount, message) {
     console.log(`Awarded ${amount} points. Total: ${dailyPoints}.  ${message}`);
 }
 
+
 function calculateTotalDailyPoints() {
     let total = morningBonusPoints; // Start with morning bonus
 
@@ -41,9 +42,9 @@ function calculateTotalDailyPoints() {
 
 function updatePointsDisplay() {
     pointsDisplay.textContent = dailyPoints + "/" + totalDailyPoints;
-    localStorage.setItem(getUserKey('dailyPoints'), dailyPoints);
-    localStorage.setItem(getUserKey('totalDailyPoints'), totalDailyPoints);
+    // console.log(dailyPoints);
 }
+
 
 // Check for morning bonus
 const now = new Date();
@@ -679,7 +680,7 @@ function renderRoutines(day) {
             saveRoutines();
             routineInput.value = '';
         }
-        calculateTotalDailyPoints();
+        // calculateTotalDailyPoints();
     });
 
     markDayCompleteBtn.addEventListener('click', () => {
@@ -706,9 +707,9 @@ function renderRoutines(day) {
             const index = parseInt(e.target.dataset.index);
             routines[day][index].completed = e.target.checked;
             if (e.target.checked) { // Award points only when checked
-                awardPoints(routinePoints, `Routine "${routines[day][index].text}" completed!`);
-                calculateTotalDailyPoints();
+                awardPoints(routinePoints, `Routine "${routines[day][index].text}" completed!`);                
             }
+            calculateTotalDailyPoints();
             saveRoutines();
         }
     });
@@ -722,6 +723,16 @@ function renderRoutines(day) {
             saveRoutines();
         }
     });
+
+    //Award points for completed routines when the page loads or a day is selected
+    if (routines[day]) {
+        routines[day].forEach(routine => {
+            if (routine.completed) {
+                awardPoints(routinePoints, `Routine "${routine.text}" completed!`);
+            }
+        });
+    }
+
 }
 
 function saveRoutines() {
@@ -847,6 +858,7 @@ function updateDaySummary() {
         localStorage.setItem(getUserKey(`points_${today}`), dailyPoints); //store daily points
         dailyPoints = 0; // Reset points for the next day
         totalDailyPoints=0;
+        calculateTotalDailyPoints();
         updatePointsDisplay();
     }
 }
@@ -859,9 +871,10 @@ tasks.forEach(task => {
     totalTime += taskTime;
     if (task.completed) {
         completedTasksList += `<li>${task.text} - ${formatTime(taskTime)}</li>`;
-        awardPoints(taskPoints, `Task "${task.text}" completed.`);
+        awardPoints(taskPoints, `Task "${task.text}" completed.`); 
     }
 });
+
 
 // Display a success popup if all routines are done before 11 PM
 if (now.getHours() < 23 && routines[currentDay] && routines[currentDay].every(routine => routine.completed)) { //changed
@@ -1052,18 +1065,14 @@ function saveTimerState() {
 window.addEventListener('load', () => {
     const storedDailyPoints = localStorage.getItem(getUserKey('dailyPoints'));
     const storedTotalDailyPoints = localStorage.getItem(getUserKey('totalDailyPoints'));
-    const storedRoutines = localStorage.getItem(getUserKey('routines')); // Load routines from localStorage
-
+    
     if (storedDailyPoints) {
         dailyPoints = parseInt(storedDailyPoints);
     }
     if (storedTotalDailyPoints) {
         totalDailyPoints = parseInt(storedTotalDailyPoints);
     }
-    if (storedRoutines) {
-        routines = JSON.parse(storedRoutines); //Load routines here
-    }
-    console.log(dailyPoints,totalDailyPoints);
-    updatePointsDisplay();
-    calculateTotalDailyPoints();
+    // console.log(dailyPoints,totalDailyPoints);
+    // updatePointsDisplay();
+    // calculateTotalDailyPoints();
 });
