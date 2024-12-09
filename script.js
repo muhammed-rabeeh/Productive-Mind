@@ -991,7 +991,7 @@ selectRandomTaskBtn.addEventListener('click', () => {
     if (tasks.length > 0) {
         const randomTask = tasks[Math.floor(Math.random() * tasks.length)];
         showRandomTaskPopup(randomTask.text);
-        speak(`You have selected ${randomTask.text} task, Complete the task steps as soon as possible.`);
+        speak(`You have selected ${randomTask.text} task. Complete the task as soon as possible.`);
     } else {
         speak('No tasks available to select from.');
         alert('No tasks available to select from.');
