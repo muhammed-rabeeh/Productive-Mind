@@ -51,7 +51,7 @@ const now = new Date();
 const hours = now.getHours();
 const minutes = now.getMinutes();
 console.log("hours: " + hours + " minutes: " + minutes);
-if (hours === 7 && minutes >= 0 && minutes <= 30) {
+if (hours === 5 && minutes >= 0 && minutes <= 30) {
     totalTime=0;
     awardPoints(morningBonusPoints, "Morning bonus awarded!");
 }
