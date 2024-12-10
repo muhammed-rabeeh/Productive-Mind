@@ -1119,7 +1119,6 @@ function saveTimerState() {
 
 
 
-<<<<<<< HEAD
 // // Load points from local storage on page load.  Move this to the very end.
 // window.addEventListener('load', () => {
 //     const storedDailyPoints = localStorage.getItem(getUserKey('dailyPoints'));
@@ -1135,20 +1134,3 @@ function saveTimerState() {
 //     calculateTotalDailyPoints(); //call to update points display
 //     updatePointsDisplay(); //call to update points display
 // });
-=======
-//Load points from local storage on page load.  Move this to the very end.
-window.addEventListener('load', () => {
-    const storedDailyPoints = localStorage.getItem(getUserKey('dailyPoints'));
-    const storedTotalDailyPoints = localStorage.getItem(getUserKey('totalDailyPoints'));
-    
-    if (storedDailyPoints) {
-        dailyPoints = parseInt(storedDailyPoints);
-    }
-    if (storedTotalDailyPoints) {
-        totalDailyPoints = parseInt(storedTotalDailyPoints);
-    }
-    // console.log(dailyPoints,totalDailyPoints);
-    // updatePointsDisplay();
-    // calculateTotalDailyPoints();
-});
->>>>>>> 77c1b3335fe6fa7e0b6e680a6b5dcec1ea8bc35c
