@@ -7,7 +7,7 @@ const timerCircle = document.getElementById('timer-circle');
 const circleCircumference = 2 * Math.PI * 90; // 2πr
 const pointsDisplay = document.getElementById('points-display'); // Get the points display element
 
-
+let summary=""
 let dailyPoints = 0; // Initialize daily points
 let routinePoints = 10; // Points per completed routine
 let morningBonusPoints = 50; // Points for logging in between 5-5:30 AM
@@ -16,8 +16,25 @@ let stepPoints = 20; // Points per completed step
 let totalTime = 0; // Total time spent on tasks
 let totalDailyPoints = 0; // Total daily points
 
+
+
+// Load timer state from local storage
+const currentUser = localStorage.getItem('currentUser');
+if (!currentUser) {
+    window.location.href = 'signin.html';
+}
+
+function getUserKey(key) {
+    return `${currentUser}_${key}`;
+}
+
+speak("Hey, I'm Productive Mind. Let's get started!");
+
+let lastSavedDate = localStorage.getItem(getUserKey('lastSavedDate'));
+
 // Function to award points
 function awardPoints(amount, message) {
+    console.log(amount)
     dailyPoints += amount;
     updatePointsDisplay(); // Update the points display
     speak(`${message}`);
@@ -50,23 +67,57 @@ function updatePointsDisplay() {
 const now = new Date();
 const hours = now.getHours();
 const minutes = now.getMinutes();
+let today = now.toISOString().split('T')[0];
 console.log("hours: " + hours + " minutes: " + minutes);
-if (hours === 5 && minutes >= 0 && minutes <= 30) {
-    totalTime=0;
+
+function resetDailyPoints() {
+    dailyPoints = 0;
+    totalDailyPoints = 0;
+    localStorage.setItem(getUserKey('morningBonus'), dailyPoints);
+    updatePointsDisplay();
+} 
+
+console.log(lastSavedDate);
+console.log(today);
+
+//Check if the date has changed
+if (lastSavedDate === null || lastSavedDate !== today) {
+    resetDailyPoints();
+    lastSavedDate = today;
+    localStorage.setItem(getUserKey('lastSavedDate'), lastSavedDate);
+    console.log("Daily points reset because date changed.");
+} else {
+    // Load daily points from storage if the date hasn't changed
+    const storedDailyPoints = localStorage.getItem(getUserKey('dailyPoints'));
+    const storedTotalDailyPoints = localStorage.getItem(getUserKey('totalDailyPoints'));
+
+    if (storedDailyPoints) {
+        dailyPoints = parseInt(storedDailyPoints);
+    }
+    if (storedTotalDailyPoints) {
+        totalDailyPoints = parseInt(storedTotalDailyPoints);
+    }
+    updatePointsDisplay();
+}
+
+
+if (hours === 15 && minutes >= 0 && minutes <=9) {
     awardPoints(morningBonusPoints, "Morning bonus awarded!");
+    localStorage.setItem(getUserKey('morningBonus'), dailyPoints);
+    console.log("Morning bonus awarded and saved.");
+} else {
+
+    const storedMorningBonus = localStorage.getItem(getUserKey('morningBonus'));
+    console.log(storedMorningBonus);
+    if (storedMorningBonus!=0 && storedMorningBonus != null) {
+        awardPoints(parseInt(storedMorningBonus), "");
+        console.log("Morning bonus loaded from storage: ", parseInt(storedMorningBonus));
+    } else {
+        console.log("You haven't got any reward today: ", parseInt(storedMorningBonus));
+    }      
+
 }
 
-// Load timer state from local storage
-const currentUser = localStorage.getItem('currentUser');
-if (!currentUser) {
-    window.location.href = 'signin.html';
-}
-
-function getUserKey(key) {
-    return `${currentUser}_${key}`;
-}
-
-speak("Hey, I'm Productive Mind. Let's get started!");
 
 let timerState = JSON.parse(localStorage.getItem(getUserKey('timerState'))) || {
     running: false,
@@ -408,7 +459,6 @@ function toggleStepTimer(taskIndex, stepIndex) {
             return; // Exit the function
         } else {
             step.completed = true; // Mark the step as complete
-            awardPoints(stepPoints, `Step "${step.text}" of task "${tasks[taskIndex].text}" completed!`); //Award points here
             updateTargetTimer(step.elapsedTime, step.text); // Update target timer
         }
 
@@ -553,6 +603,7 @@ function formatTime(seconds) {
 // Modify saveTasks to update points when a task is completed.
 function saveTasks() {
     localStorage.setItem(getUserKey('tasks'), JSON.stringify(tasks));
+    // localStorage.setItem(getUserKey('lastSavedDate'), today);
     // tasks.forEach(task => {
     //     if (task.completed) {
     //         awardPoints(taskPoints, `Task "${task.text}" completed!`);
@@ -812,15 +863,17 @@ function updateTrackerCalendar() {
 
 const summaryDisplay = document.getElementById('summary-display');
 
-const today = now.toISOString().split('T')[0];
-
 // Reset total time and completed tasks at the beginning of the day
 
 
 function updateDaySummary() {
 
     // Check if the day has changed and reset the timer if needed
-    if (now.getHours() === 0 && now.getMinutes() === 0) {
+    if (now.getHours() === 15 && now.getMinutes() === 2) {
+        dailyPoints = 0; // Reset points for the next day
+        totalDailyPoints=0;
+        calculateTotalDailyPoints();
+        updatePointsDisplay();
         // Reset step timers and elapsed times
         tasks.forEach(task => {
             task.steps.forEach(step => {
@@ -850,7 +903,7 @@ function updateDaySummary() {
     // Format the summary string
     const hours = Math.floor(totalTime / 3600);
     const minutes = Math.floor((totalTime % 3600) / 60);
-    const summary = `
+    summary = `
         <h3>Today's Summary (${now.toLocaleDateString()}):</h3>
         <p>Total Productive Time: ${hours} hours ${minutes} minutes</p>
         <p>Total Points Earned: ${dailyPoints}</p>
@@ -860,16 +913,6 @@ function updateDaySummary() {
 
     // Update the summary display
     summaryDisplay.innerHTML = summary;
-
-    // Save the summary for the current day if it's past 11 pm
-    if (now.getHours() === 23 && minutes >= 0 && minutes <= 30) {
-        localStorage.setItem(getUserKey(`summary_${today}`), summary);
-        localStorage.setItem(getUserKey(`points_${today}`), dailyPoints); //store daily points
-        dailyPoints = 0; // Reset points for the next day
-        totalDailyPoints=0;
-        calculateTotalDailyPoints();
-        updatePointsDisplay();
-    }
 }
 
 let completedTasksList = '';
@@ -1076,18 +1119,18 @@ function saveTimerState() {
 
 
 
-//Load points from local storage on page load.  Move this to the very end.
-window.addEventListener('load', () => {
-    const storedDailyPoints = localStorage.getItem(getUserKey('dailyPoints'));
-    const storedTotalDailyPoints = localStorage.getItem(getUserKey('totalDailyPoints'));
-    
-    if (storedDailyPoints) {
-        dailyPoints = parseInt(storedDailyPoints);
-    }
-    if (storedTotalDailyPoints) {
-        totalDailyPoints = parseInt(storedTotalDailyPoints);
-    }
-    // console.log(dailyPoints,totalDailyPoints);
-    // updatePointsDisplay();
-    // calculateTotalDailyPoints();
-});
+// // Load points from local storage on page load.  Move this to the very end.
+// window.addEventListener('load', () => {
+//     const storedDailyPoints = localStorage.getItem(getUserKey('dailyPoints'));
+//     const storedTotalDailyPoints = localStorage.getItem(getUserKey('totalDailyPoints'));
+
+//     if (storedDailyPoints) {
+//         dailyPoints = parseInt(storedDailyPoints);
+//     }
+//     if (storedTotalDailyPoints) {
+//         totalDailyPoints = parseInt(storedTotalDailyPoints);
+//     }
+//     loadMorningBonus(); //call the function here to check the morning bonus
+//     calculateTotalDailyPoints(); //call to update points display
+//     updatePointsDisplay(); //call to update points display
+// });
