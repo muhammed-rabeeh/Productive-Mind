@@ -101,7 +101,7 @@ if (lastSavedDate === null || lastSavedDate !== today) {
 }
 
 
-if (hours === 15 && minutes >= 0 && minutes <=9) {
+if (hours === 5 && minutes >= 0 && minutes <=30) {
     awardPoints(morningBonusPoints, "Morning bonus awarded!");
     localStorage.setItem(getUserKey('morningBonus'), dailyPoints);
     console.log("Morning bonus awarded and saved.");
