@@ -7,7 +7,7 @@ const timerCircle = document.getElementById('timer-circle');
 const circleCircumference = 2 * Math.PI * 90; // 2πr
 const pointsDisplay = document.getElementById('points-display'); // Get the points display element
 
-let summary=""
+let summary="";
 let dailyPoints = 0; // Initialize daily points
 let routinePoints = 10; // Points per completed routine
 let morningBonusPoints = 50; // Points for logging in between 5-5:30 AM
@@ -15,6 +15,9 @@ let taskPoints = 25; // Points per completed task
 let stepPoints = 20; // Points per completed step
 let totalTime = 0; // Total time spent on tasks
 let totalDailyPoints = 0; // Total daily points
+const addTaskBtn = document.getElementById('add-task');
+const taskInput = document.getElementById('task-input');
+const taskList = document.getElementById('task-list');
 
 
 
@@ -31,6 +34,14 @@ function getUserKey(key) {
 speak("Hey, I'm Productive Mind. Let's get started!");
 
 let lastSavedDate = localStorage.getItem(getUserKey('lastSavedDate'));
+let tasks = JSON.parse(localStorage.getItem(getUserKey('tasks'))) || [];
+
+let timerState = JSON.parse(localStorage.getItem(getUserKey('timerState'))) || {
+    running: false,
+    endTime: 0,
+    initialSeconds: 0,
+    stepTimers: [] // Add this to store step timer information
+};
 
 // Function to award points
 function awardPoints(amount, message) {
@@ -70,12 +81,39 @@ const minutes = now.getMinutes();
 let today = now.toISOString().split('T')[0];
 console.log("hours: " + hours + " minutes: " + minutes);
 
+
 function resetDailyPoints() {
+    localStorage.setItem(getUserKey(`summary_${today}`),summary);//remove summary for the day
     dailyPoints = 0;
     totalDailyPoints = 0;
-    localStorage.setItem(getUserKey('morningBonus'), dailyPoints);
+    localStorage.setItem(getUserKey('morningBonus'), dailyPoints); //set morning bonus to 0
     updatePointsDisplay();
-} 
+
+    // Reset task and step completion statuses
+    tasks.forEach(task => {
+        task.completed = false;
+        task.steps.forEach(step => {
+            step.completed = false;
+            step.elapsedTime = 0;
+            step.remainingTime = 0;
+            step.totalTime = 0;
+            step.timerRunning = false;
+            clearInterval(step.timerInterval); // Clear any running intervals
+        });
+    });
+
+    saveTasks(); // Save the updated task data
+    renderTasks(); // Re-render the task list to reflect changes
+
+    // Reset target timer state
+    timerState = {
+        running: false,
+        endTime: 0,
+        initialSeconds: 0,
+        stepTimers: []
+    };
+    saveTimerState();
+}
 
 console.log(lastSavedDate);
 console.log(today);
@@ -119,12 +157,6 @@ if (hours === 5 && minutes >= 0 && minutes <=30) {
 }
 
 
-let timerState = JSON.parse(localStorage.getItem(getUserKey('timerState'))) || {
-    running: false,
-    endTime: 0,
-    initialSeconds: 0,
-    stepTimers: [] // Add this to store step timer information
-};
 
 function updateTimerDisplay(remainingSeconds) {
     const hours = Math.floor(remainingSeconds / 3600);
@@ -521,10 +553,6 @@ if (timerState.running && timerState.endTime > new Date().getTime()) {
 }
 
 // Task Creation
-const addTaskBtn = document.getElementById('add-task');
-const taskInput = document.getElementById('task-input');
-const taskList = document.getElementById('task-list');
-let tasks = JSON.parse(localStorage.getItem(getUserKey('tasks'))) || [];
 
 addTaskBtn.addEventListener('click', addTask);
 
